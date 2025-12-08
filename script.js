@@ -29,7 +29,7 @@ const sfx = {
     start:()=>{playTone(600,'sine',0.1,0.1)}
 };
 
-// --- 2. Data ---
+// --- 2. Data Definition (Visuals) ---
 const baseFace = `<path fill="none" stroke="#cbd5e1" stroke-width="2" d="M10,50 Q10,10 45,10 Q80,10 80,50 Q80,90 45,90 Q10,90 10,50" />`;
 const visemes = {
     bilabial:{t:"Bilabial",d:"Lips closed (p,b,m)",p:`${baseFace}<path d="M30,60 Q45,60 60,60" stroke="#333" stroke-width="3"/><path d="M30,60 Q45,65 60,60" stroke="#333" stroke-width="1"/>`},
@@ -49,52 +49,86 @@ const visemes = {
     silence:{t:"Ready",d:"...",p:`${baseFace}<path d="M35,60 L55,60" stroke="#333" stroke-width="2"/>`}
 };
 
-const defaultDb = {
-    basic: [
-        { l: {w:"Light", b:[{p:"l",t:"l_shape"},{p:"ay",t:"wide"},{p:"ay",t:"spread"},{p:"t",t:"alveolar"}]}, r: {w:"Right", b:[{p:"r",t:"r_shape"},{p:"ay",t:"wide"},{p:"ay",t:"spread"},{p:"t",t:"alveolar"}]} },
-        { l: {w:"Load", b:[{p:"l",t:"l_shape"},{p:"ow",t:"round"},{p:"w",t:"u_shape"},{p:"d",t:"alveolar"}]}, r: {w:"Road", b:[{p:"r",t:"r_shape"},{p:"ow",t:"round"},{p:"w",t:"u_shape"},{p:"d",t:"alveolar"}]} },
-        { l: {w:"Lead", b:[{p:"l",t:"l_shape"},{p:"ea",t:"spread"},{p:"d",t:"alveolar"}]}, r: {w:"Read", b:[{p:"r",t:"r_shape"},{p:"ea",t:"spread"},{p:"d",t:"alveolar"}]} },
-        { l: {w:"Lock", b:[{p:"l",t:"l_shape"},{p:"o",t:"wide"},{p:"ck",t:"velar"}]}, r: {w:"Rock", b:[{p:"r",t:"r_shape"},{p:"o",t:"wide"},{p:"ck",t:"velar"}]} },
-        { l: {w:"Fly", b:[{p:"f",t:"labiodental"},{p:"l",t:"l_shape"},{p:"ay",t:"wide"},{p:"y",t:"spread"}]}, r: {w:"Fry", b:[{p:"f",t:"labiodental"},{p:"r",t:"r_shape"},{p:"ay",t:"wide"},{p:"y",t:"spread"}]} }
-    ],
-    intermediate: [
-        { l: {w:"Play", b:[{p:"p",t:"bilabial"},{p:"l",t:"l_shape"},{p:"ay",t:"mid"},{p:"y",t:"spread"}]}, r: {w:"Pray", b:[{p:"p",t:"bilabial"},{p:"r",t:"r_shape"},{p:"ay",t:"mid"},{p:"y",t:"spread"}]} },
-        { l: {w:"Glass", b:[{p:"g",t:"velar"},{p:"l",t:"l_shape"},{p:"ae",t:"wide"},{p:"s",t:"alveolar"}]}, r: {w:"Grass", b:[{p:"g",t:"velar"},{p:"r",t:"r_shape"},{p:"ae",t:"wide"},{p:"s",t:"alveolar"}]} },
-        { l: {w:"Cloud", b:[{p:"k",t:"velar"},{p:"l",t:"l_shape"},{p:"aw",t:"wide"},{p:"w",t:"u_shape"},{p:"d",t:"alveolar"}]}, r: {w:"Crowd", b:[{p:"k",t:"velar"},{p:"r",t:"r_shape"},{p:"aw",t:"wide"},{p:"w",t:"u_shape"},{p:"d",t:"alveolar"}]} }
-    ],
-    advanced: [
-        { l: {w:"Alive", b:[{p:"a",t:"mid"},{p:"l",t:"l_shape"},{p:"ay",t:"wide"},{p:"v",t:"labiodental"}]}, r: {w:"Arrive", b:[{p:"a",t:"mid"},{p:"rr",t:"r_shape"},{p:"ay",t:"wide"},{p:"v",t:"labiodental"}]} },
-        { l: {w:"Tile", b:[{p:"t",t:"alveolar"},{p:"ay",t:"wide"},{p:"l",t:"l_shape"}]}, r: {w:"Tire", b:[{p:"t",t:"alveolar"},{p:"ay",t:"wide"},{p:"er",t:"r_shape"}]} }
-    ],
-    business: [
-        { l: {w:"Collect", b:[{p:"k",t:"velar"},{p:"o",t:"mid"},{p:"l",t:"l_shape"},{p:"eh",t:"mid"},{p:"k",t:"velar"},{p:"t",t:"alveolar"}]}, r: {w:"Correct", b:[{p:"k",t:"velar"},{p:"o",t:"mid"},{p:"r",t:"r_shape"},{p:"eh",t:"mid"},{p:"k",t:"velar"},{p:"t",t:"alveolar"}]} },
-        { l: {w:"Leader", b:[{p:"l",t:"l_shape"},{p:"iy",t:"spread"},{p:"d",t:"alveolar"},{p:"er",t:"r_shape"}]}, r: {w:"Reader", b:[{p:"r",t:"r_shape"},{p:"iy",t:"spread"},{p:"d",t:"alveolar"},{p:"er",t:"r_shape"}]} }
-    ]
-};
+// Define default categories to load
+const defaultCategories = ['basic', 'intermediate', 'advanced', 'business'];
 
 // --- 3. App State ---
-let db = defaultDb, currentCategory = 'basic', currentMode = 'speaking', currentPair = {}, targetObj = {}, isLTarget = false, streak = 0;
+let db = {}, currentCategory = 'basic', currentMode = 'speaking', currentPair = {}, targetObj = {}, isLTarget = false, streak = 0;
 let isRecording = false, mediaRecorder = null, audioChunks = [], audioCtx = null, analyser = null, dataArray = null, canvasCtx = null;
 let userAudioBlob = null;
 let hasSpoken = false, silenceStart = 0; const VAD_THRESHOLD = 15, VAD_SILENCE = 1200;
 let visMode = 'frequency'; 
 let speechRate = 0.8; 
-let selectedLevel = null; // New for DB Manager
+let selectedLevel = null;
 
-window.onload = () => {
-    loadDb(); initCanvas(); window.addEventListener('resize', initCanvas);
+// Init
+window.onload = async () => {
+    // データ読み込みを待機
+    await loadDb();
+    
+    initCanvas(); 
+    window.addEventListener('resize', initCanvas);
     const key = localStorage.getItem('gemini_key');
     if(key) { document.getElementById('api-key').value=key; fetchModels(true); }
     const rate = localStorage.getItem('lr_rate');
     if(rate) speechRate = parseFloat(rate);
-    populateCategorySelect(); changeCategory();
+    
+    populateCategorySelect(); 
+    changeCategory();
 };
+
+// --- Data Loading Logic (Modified) ---
+async function loadDb() {
+    // 1. まずLocalStorageをチェック（ユーザーの編集データを優先）
+    const s = localStorage.getItem('lr_v24_db');
+    if (s) {
+        try {
+            db = JSON.parse(s);
+            console.log("Loaded DB from LocalStorage");
+            return;
+        } catch (e) {
+            console.error("LocalStorage load failed, falling back to files.", e);
+        }
+    }
+
+    // 2. なければJSONファイルから読み込み
+    console.log("Fetching default JSON files...");
+    db = {};
+    
+    // 全ファイルを並列で取得
+    const promises = defaultCategories.map(async (cat) => {
+        try {
+            // キャッシュ対策でタイムスタンプを付与しても良いが、今回はシンプルに
+            const res = await fetch(`data/${cat}.json`);
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            const data = await res.json();
+            db[cat] = data;
+        } catch (e) {
+            console.error(`Failed to load ${cat}.json:`, e);
+            db[cat] = []; // 読み込み失敗時は空配列
+        }
+    });
+
+    await Promise.all(promises);
+    console.log("Default DB loaded:", Object.keys(db));
+}
 
 // --- Core Logic ---
 function changeCategory() {
-    currentCategory = document.getElementById('category-select').value;
-    if(db[currentCategory]) { streak=0; updateStreak(); nextQuestion(); }
+    const sel = document.getElementById('category-select');
+    // もしDBロード前に実行された場合のガード
+    if (Object.keys(db).length === 0) return;
+
+    // 現在の選択値がDBにあるか確認、なければ最初のキーを選択
+    if (!db[sel.value]) {
+        currentCategory = Object.keys(db)[0] || 'basic';
+    } else {
+        currentCategory = sel.value;
+    }
+    
+    streak=0; updateStreak(); nextQuestion();
 }
+
 function setMode(m) {
     currentMode=m; document.querySelectorAll('.mode-toggle button').forEach(b=>b.classList.remove('active'));
     if(m==='speaking'){
@@ -113,13 +147,19 @@ function setMode(m) {
     nextQuestion();
 }
 function nextQuestion(autoStart=false) {
+    const list=db[currentCategory];
+    // データがない場合の安全策
+    if(!list||list.length===0){
+        document.getElementById('target-word').innerText = "No Data";
+        return;
+    }
+
     const fb=document.getElementById('feedback-area'); fb.innerText=currentMode==='speaking'?"Ready":"Listen & Select"; fb.className="feedback";
     document.getElementById('next-btn-spk').style.display='none'; document.getElementById('next-btn-lst').style.display='none'; document.getElementById('rec-btn').style.display='block';
     document.getElementById('replay-user-btn').style.display='none';
     document.querySelector('.container').classList.remove('shake-anim','pop-anim');
     document.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('success'));
 
-    const list=db[currentCategory]||db.basic; if(!list||list.length===0)return;
     currentPair=list[Math.floor(Math.random()*list.length)];
     isLTarget=Math.random()>0.5; targetObj=isLTarget?currentPair.l:currentPair.r;
 
@@ -345,10 +385,10 @@ async function fetchModels(silent=false) {
         sel.disabled=false;
     } catch(e) { if(!silent) alert(e.message); }
 }
-function loadDb(){ const s=localStorage.getItem('lr_v24_db'); if(s) try{db=JSON.parse(s);}catch(e){} }
+// Old synchronous loadDb removed. New async version is at the top.
 function populateCategorySelect() { const s=document.getElementById('category-select'); s.innerHTML=''; Object.keys(db).forEach(k=>{const o=document.createElement('option');o.value=k;o.text=`${k} (${db[k].length})`;s.appendChild(o);}); if(db[currentCategory])s.value=currentCategory; }
 
-// --- NEW DB MANAGER LOGIC ---
+// --- DB MANAGER LOGIC ---
 
 function openDbManager() {
     document.getElementById('db-manager-modal').style.display = 'flex';
@@ -513,10 +553,11 @@ function saveDb() {
     localStorage.setItem('lr_v24_db', JSON.stringify(db));
 }
 
-function resetDb(){
+async function resetDb(){
     if(confirm("Reset all data to defaults? This cannot be undone.")){
-        db = defaultDb; 
         localStorage.removeItem('lr_v24_db'); 
+        // Reload defaults from files
+        await loadDb();
         openDbManager();
     }
 }
