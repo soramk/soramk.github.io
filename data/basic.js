@@ -3,10 +3,8 @@ window.dataset_basic = [
   { "l": { "w":"Load", "b":[{"p":"l","t":"l_shape"},{"p":"ow","t":"round"},{"p":"w","t":"u_shape"},{"p":"d","t":"alveolar"}] }, "r": { "w":"Road", "b":[{"p":"r","t":"r_shape"},{"p":"ow","t":"round"},{"p":"w","t":"u_shape"},{"p":"d","t":"alveolar"}] } },
   { "l": { "w":"Lead", "b":[{"p":"l","t":"l_shape"},{"p":"ea","t":"spread"},{"p":"d","t":"alveolar"}] }, "r": { "w":"Read", "b":[{"p":"r","t":"r_shape"},{"p":"ea","t":"spread"},{"p":"d","t":"alveolar"}] } },
   { "l": { "w":"Lock", "b":[{"p":"l","t":"l_shape"},{"p":"o","t":"wide"},{"p":"ck","t":"velar"}] }, "r": { "w":"Rock", "b":[{"p":"r","t":"r_shape"},{"p":"o","t":"wide"},{"p":"ck","t":"velar"}] } },
-  { "l": { "w":"Fly", "b":[{"p":"f","t":"labiodental"},{"p":"l","t":"l_shape"},{"p":"ay","t":"wide"},{"p":"y","t":"spread"}] }, "r": { "w":"Fry", "b":[{"p":"f","t":"labiodental"},{"p":"r","t":"r_shape"},{"p":"ay","t":"wide"},{"p":"y","t":"spread"}] } }
-  { "l": { "w":"Lock", "b":[{"p":"l","t":"l_shape"},{"p":"o","t":"wide"},{"p":"ck","t":"velar"}] }, "r": { "w":"Rock", "b":[{"p":"r","t":"r_shape"},{"p":"o","t":"wide"},{"p":"ck","t":"velar"}] } },
+  { "l": { "w":"Fly", "b":[{"p":"f","t":"labiodental"},{"p":"l","t":"l_shape"},{"p":"ay","t":"wide"},{"p":"y","t":"spread"}] }, "r": { "w":"Fry", "b":[{"p":"f","t":"labiodental"},{"p":"r","t":"r_shape"},{"p":"ay","t":"wide"},{"p":"y","t":"spread"}] } },
   { "l": { "w":"Long", "b":[{"p":"l","t":"l_shape"},{"p":"o","t":"round"},{"p":"ng","t":"velar"}] }, "r": { "w":"Wrong", "b":[{"p":"wr","t":"r_shape"},{"p":"o","t":"round"},{"p":"ng","t":"velar"}] } },
-  { "l": { "w":"Lead", "b":[{"p":"l","t":"l_shape"},{"p":"ea","t":"spread"},{"p":"d","t":"alveolar"}] }, "r": { "w":"Read", "b":[{"p":"r","t":"r_shape"},{"p":"ea","t":"spread"},{"p":"d","t":"alveolar"}] } },
   { "l": { "w":"Lip", "b":[{"p":"l","t":"l_shape"},{"p":"i","t":"mid"},{"p":"p","t":"bilabial"}] }, "r": { "w":"Rip", "b":[{"p":"r","t":"r_shape"},{"p":"i","t":"mid"},{"p":"p","t":"bilabial"}] } },
   { "l": { "w":"Lane", "b":[{"p":"l","t":"l_shape"},{"p":"ey","t":"mid"},{"p":"y","t":"spread"},{"p":"n","t":"alveolar"}] }, "r": { "w":"Rain", "b":[{"p":"r","t":"r_shape"},{"p":"ey","t":"mid"},{"p":"y","t":"spread"},{"p":"n","t":"alveolar"}] } },
   { "l": { "w":"Law", "b":[{"p":"l","t":"l_shape"},{"p":"aw","t":"round"}] }, "r": { "w":"Raw", "b":[{"p":"r","t":"r_shape"},{"p":"aw","t":"round"}] } },
@@ -40,5 +38,5 @@ window.dataset_basic = [
   { "l": { "w":"Lump", "b":[{"p":"l","t":"l_shape"},{"p":"u","t":"mid"},{"p":"mp","t":"bilabial"}] }, "r": { "w":"Rump", "b":[{"p":"r","t":"r_shape"},{"p":"u","t":"mid"},{"p":"mp","t":"bilabial"}] } },
   { "l": { "w":"Lung", "b":[{"p":"l","t":"l_shape"},{"p":"u","t":"mid"},{"p":"ng","t":"velar"}] }, "r": { "w":"Rung", "b":[{"p":"r","t":"r_shape"},{"p":"u","t":"mid"},{"p":"ng","t":"velar"}] } },
   { "l": { "w":"Lush", "b":[{"p":"l","t":"l_shape"},{"p":"u","t":"mid"},{"p":"sh","t":"postalveolar"}] }, "r": { "w":"Rush", "b":[{"p":"r","t":"r_shape"},{"p":"u","t":"mid"},{"p":"sh","t":"postalveolar"}] } },
-  { "l": { "w":"Lub", "b":[{"p":"l","t":"l_shape"},{"p":"u","t":"mid"},{"p":"b","t":"bilabial"}] }, "r": { "w":"Rub", "b":[{"p":"r","t":"r_shape"},{"p":"u","t":"mid"},{"p":"b","t":"bilabial"}] } },
+  { "l": { "w":"Lub", "b":[{"p":"l","t":"l_shape"},{"p":"u","t":"mid"},{"p":"b","t":"bilabial"}] }, "r": { "w":"Rub", "b":[{"p":"r","t":"r_shape"},{"p":"u","t":"mid"},{"p":"b","t":"bilabial"}] } }
 ];
