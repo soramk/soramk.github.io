@@ -140,7 +140,7 @@ async function toggleRecord() {
             userAudioBlob=blob; 
             document.getElementById('replay-user-btn').style.display='block';
 
-            // Decode for Visualization History
+            // Decode for Visualization History (これで静的表示データを作成)
             const arrayBuffer = await blob.arrayBuffer();
             const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
             renderStaticResult(audioBuffer); 
@@ -151,7 +151,8 @@ async function toggleRecord() {
         isRecording=true; hasSpoken=false; silenceStart=0;
         btn.classList.add('recording'); btn.innerText="■ Stop";
         
-        // Reset Visualizer
+        // ★ 録音開始時にCanvasをクリアする (Reset)
+        resetVisualizerState();
         initCanvas(); 
         visualize(); 
         mediaRecorder.start();
@@ -166,22 +167,33 @@ function stopRecordingInternal() {
     }
 }
 
-// ★ Prompt Update: Japanese Advice ★
+// ★ Prompt Update: Force Japanese JSON ★
 async function sendToGemini(blob, mime) {
     const k=document.getElementById('api-key').value, m=document.getElementById('model-select').value;
     const b64=await new Promise(r=>{const fr=new FileReader(); fr.onloadend=()=>r(fr.result.split(',')[1]); fr.readAsDataURL(blob);});
     
     const url=`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${k}`;
     
-    // プロンプト修正: アドバイスを日本語で要求
+    // プロンプト修正: 明示的に日本語を指定し、JSON構造を強制
     const promptText = `
-    Listen to the audio. The user is trying to say the English word "${targetObj.w}".
-    1. Identify the word heard.
-    2. If the pronunciation is wrong (especially if it sounds like "${(isLTarget?currentPair.r:currentPair.l).w}"), provide a VERY BRIEF 1-sentence tip on tongue position IN JAPANESE.
-    3. Return ONLY a JSON object: {"heard": "english_word", "correct": boolean, "advice": "japanese_string"}
+    Input: Audio of a user trying to pronounce the English word "${targetObj.w}".
+    Task:
+    1. Identify the heard word.
+    2. Compare it with the target "${targetObj.w}" and the distractor "${(isLTarget?currentPair.r:currentPair.l).w}".
+    3. If incorrect, provide a 1-sentence advice IN JAPANESE (日本語) about tongue position or lips.
+    
+    Output Format (JSON Only):
+    {
+      "heard": "english_word_heard",
+      "correct": true/false,
+      "advice": "日本語のアドバイス文字列"
+    }
     `;
 
-    const p={contents:[{parts:[{text:promptText},{inline_data:{mime_type:mime.split(';')[0],data:b64}}]}]};
+    const p={
+        contents:[{parts:[{text:promptText},{inline_data:{mime_type:mime.split(';')[0],data:b64}}]}],
+        generationConfig: { response_mime_type: "application/json" } // JSONモードを強制
+    };
 
     try{
         const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
@@ -189,8 +201,6 @@ async function sendToGemini(blob, mime) {
         if(d.error) throw new Error(d.error.message);
         
         let rawText = d.candidates[0].content.parts[0].text;
-        rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        
         const result = JSON.parse(rawText);
         checkPronunciation(result);
     }catch(e){
@@ -222,7 +232,8 @@ function checkPronunciation(aiResult) {
     }else{
         sfx.wrong(); cont.classList.add('shake-anim');
         // アドバイスを表示
-        fb.innerHTML=`⚠️ ${inp}<br><small style="font-size:0.8rem; color:var(--text); font-weight:bold;">💡 ${aiResult.advice || "もう一度トライ！"}</small>`; 
+        const adviceText = aiResult.advice || "もう一度トライ！";
+        fb.innerHTML=`⚠️ ${inp}<br><small style="font-size:0.8rem; color:var(--text); font-weight:bold;">💡 ${adviceText}</small>`; 
         fb.className="feedback incorrect"; streak=0;
     }
     updateStreakDisplay();
