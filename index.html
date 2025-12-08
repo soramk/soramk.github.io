@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L/R Master v26 (Speed Control)</title>
+    <title>L/R Master v27</title>
     <style>
         :root { --primary: #2563eb; --accent: #0ea5e9; --bg: #f8fafc; --text: #0f172a; --err: #ef4444; --success: #22c55e; --card: #ffffff; }
         body.dark-mode { --primary: #3b82f6; --bg: #0f172a; --text: #f1f5f9; --card: #1e293b; }
@@ -20,7 +20,9 @@
         /* Components */
         .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .app-title { font-weight: 800; font-size: 1.2rem; color: var(--primary); margin: 0; }
-        .btn-icon { background: rgba(128,128,128,0.1); border: none; border-radius: 8px; padding: 8px; cursor: pointer; font-size: 1.1rem; color: var(--text); }
+        .header-tools { display: flex; gap: 8px; }
+        .btn-icon { background: rgba(128,128,128,0.1); border: none; border-radius: 8px; padding: 8px; cursor: pointer; font-size: 1.1rem; color: var(--text); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-icon:hover { background: rgba(128,128,128,0.2); }
         
         .sub-header { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; margin-bottom: 10px; }
         .mode-toggle button { padding: 6px 12px; border-radius: 16px; border: 1px solid rgba(128,128,128,0.3); background: transparent; color: var(--text); font-weight: bold; font-size: 0.8rem; cursor: pointer; }
@@ -95,7 +97,7 @@
 
 <div id="start-overlay">
     <div style="font-size:3rem; margin-bottom:20px;">🎧</div>
-    <h2>L/R Master v26</h2>
+    <h2>L/R Master v27</h2>
     <p>Tap to Unlock Audio</p>
     <button class="start-btn" onclick="unlockAudio()">START</button>
 </div>
@@ -104,9 +106,10 @@
     <div class="header-bar">
         <h1 class="app-title">L/R Master</h1>
         <div class="header-tools">
-            <button class="btn-icon" onclick="toggleDarkMode()">🌙</button>
-            <button class="btn-icon" onclick="openDbManager()">📝</button>
-            <button class="btn-icon" onclick="openSettings()" style="color:var(--primary);">⚙️</button>
+            <a href="guide.html" target="_blank" class="btn-icon" title="ユーザーガイド">📖</a>
+            <button class="btn-icon" onclick="toggleDarkMode()" title="ダークモード">🌙</button>
+            <button class="btn-icon" onclick="openDbManager()" title="DB編集">📝</button>
+            <button class="btn-icon" onclick="openSettings()" style="color:var(--primary);" title="設定">⚙️</button>
         </div>
     </div>
 
@@ -124,6 +127,7 @@
         <label><input type="checkbox" id="toggle-auto-stop" checked> 🗣️ Auto Stop</label>
     </div>
 
+    <!-- Visualizer (Tap to switch mode) -->
     <div class="visualizer-box" onclick="toggleVisMode()">
         <canvas id="visualizer"></canvas>
         <div class="vis-label" id="vis-label">BARS</div>
@@ -170,6 +174,7 @@
     </div>
 </div>
 
+<!-- Settings Modal -->
 <div id="settings-modal" class="modal">
     <div class="modal-content">
         <div class="modal-header"><h3>⚙️ API Settings</h3><button class="btn-icon" onclick="closeSettings()">×</button></div>
@@ -185,6 +190,7 @@
                 <select id="model-select" style="width:100%; padding:10px; margin-top:5px; box-sizing:border-box;" disabled><option>Fetch first...</option></select>
             </div>
 
+            <!-- Speed Control -->
             <div style="margin-bottom:20px;">
                 <label style="font-size:0.8rem; font-weight:bold; color:var(--text);">3. 🗣️ Speech Speed: <span id="rate-val">0.8</span>x</label>
                 <input type="range" id="speech-rate" min="0.5" max="1.5" step="0.1" value="0.8" style="width:100%; margin-top:5px;" oninput="document.getElementById('rate-val').innerText=this.value">
@@ -195,6 +201,7 @@
     </div>
 </div>
 
+<!-- DB Modal -->
 <div id="db-manager-modal" class="modal">
     <div class="modal-content">
         <div class="modal-header"><h3>📝 DB Manager</h3><button class="btn-icon" onclick="closeDbManager()">×</button></div>
@@ -474,7 +481,6 @@
                 ctx.fillRect(x, h-barH, barW, barH);
                 x += barW + 1;
             }
-            // VAD
             const vol=Math.floor((sum/dataArray.length)*2); 
             document.getElementById('mic-debug').innerText=`Vol: ${vol}%`;
             if(document.getElementById('toggle-auto-stop').checked){
@@ -483,7 +489,6 @@
             }
         }
         
-        // VAD for wave mode fallback
         if (visMode === 'wave') {
              let sum = 0; for(let i=0; i<dataArray.length; i++) sum += Math.abs(dataArray[i] - 128);
              const vol=Math.floor((sum/dataArray.length)*10);
@@ -576,3 +581,5 @@
 </script>
 </body>
 </html>
+
+
