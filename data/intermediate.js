@@ -1,4 +1,4 @@
-[
+window.dataset_intermediate = [
   { "l": { "w":"Play", "b":[{"p":"p","t":"bilabial"},{"p":"l","t":"l_shape"},{"p":"ay","t":"mid"},{"p":"y","t":"spread"}] }, "r": { "w":"Pray", "b":[{"p":"p","t":"bilabial"},{"p":"r","t":"r_shape"},{"p":"ay","t":"mid"},{"p":"y","t":"spread"}] } },
   { "l": { "w":"Glass", "b":[{"p":"g","t":"velar"},{"p":"l","t":"l_shape"},{"p":"ae","t":"wide"},{"p":"s","t":"alveolar"}] }, "r": { "w":"Grass", "b":[{"p":"g","t":"velar"},{"p":"r","t":"r_shape"},{"p":"ae","t":"wide"},{"p":"s","t":"alveolar"}] } },
   { "l": { "w":"Cloud", "b":[{"p":"k","t":"velar"},{"p":"l","t":"l_shape"},{"p":"aw","t":"wide"},{"p":"w","t":"u_shape"},{"p":"d","t":"alveolar"}] }, "r": { "w":"Crowd", "b":[{"p":"k","t":"velar"},{"p":"r","t":"r_shape"},{"p":"aw","t":"wide"},{"p":"w","t":"u_shape"},{"p":"d","t":"alveolar"}] } }
@@ -22,4 +22,4 @@
   { "l": { "w":"Flute", "b":[{"p":"f","t":"labiodental"},{"p":"l","t":"l_shape"},{"p":"u","t":"u_shape"},{"p":"t","t":"alveolar"}] }, "r": { "w":"Fruit", "b":[{"p":"f","t":"labiodental"},{"p":"r","t":"r_shape"},{"p":"ui","t":"u_shape"},{"p":"t","t":"alveolar"}] } },
   { "l": { "w":"Glade", "b":[{"p":"g","t":"velar"},{"p":"l","t":"l_shape"},{"p":"ey","t":"mid"},{"p":"y","t":"spread"},{"p":"de","t":"alveolar"}] }, "r": { "w":"Grade", "b":[{"p":"g","t":"velar"},{"p":"r","t":"r_shape"},{"p":"ey","t":"mid"},{"p":"y","t":"spread"},{"p":"de","t":"alveolar"}] } },
   { "l": { "w":"Flesh", "b":[{"p":"f","t":"labiodental"},{"p":"l","t":"l_shape"},{"p":"e","t":"mid"},{"p":"sh","t":"postalveolar"}] }, "r": { "w":"Fresh", "b":[{"p":"f","t":"labiodental"},{"p":"r","t":"r_shape"},{"p":"e","t":"mid"},{"p":"sh","t":"postalveolar"}] } },
-]
+];
