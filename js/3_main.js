@@ -3,7 +3,7 @@ let db = {}, currentCategory = 'basic', currentMode = 'speaking', currentPair = 
 let isRecording = false, mediaRecorder = null, audioChunks = [], audioCtx = null, analyser = null, dataArray = null, canvasCtx = null;
 let userAudioBlob = null;
 let hasSpoken = false, silenceStart = 0; const VAD_THRESHOLD = 15, VAD_SILENCE = 1200;
-let visMode = 'wave'; // Default to wave
+let visMode = 'wave'; 
 let speechRate = 0.8; 
 let selectedLevel = null;
 
@@ -47,7 +47,7 @@ function setMode(m) {
     nextQuestion();
 }
 
-// ★ SRS Logic (Proposal 1) ★
+// SRS Logic
 function nextQuestion(autoStart=false) {
     const list = db[currentCategory];
     if(!list || list.length === 0){ document.getElementById('target-word').innerText = "No Data"; return; }
@@ -58,17 +58,14 @@ function nextQuestion(autoStart=false) {
     document.querySelector('.container').classList.remove('shake-anim','pop-anim');
     document.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('success'));
 
-    // SRS Filter: Find words due for review (or never reviewed)
+    // SRS Filter
     const now = Date.now();
     const dueItems = list.filter(item => !item.nextReview || item.nextReview <= now);
     
-    // 30% chance to pick random even if reviews exist (to keep variety), otherwise pick from due
     if (dueItems.length > 0 && Math.random() > 0.3) {
         currentPair = dueItems[Math.floor(Math.random() * dueItems.length)];
-        console.log("SRS: Picked review item", currentPair.l.w);
     } else {
         currentPair = list[Math.floor(Math.random() * list.length)];
-        console.log("SRS: Picked random item");
     }
 
     isLTarget = Math.random() > 0.5; 
@@ -88,21 +85,17 @@ function nextQuestion(autoStart=false) {
     }
 }
 
-// Update Word Stats (SRS)
 function updateWordStats(isCorrect) {
     if (!currentPair.streak) currentPair.streak = 0;
-    
     if (isCorrect) {
         currentPair.streak += 1;
-        // Interval: 1min, 10min, 1hour, 1day... roughly exponential
-        // Simplified: +1 day * 2^(streak)
         const bonusTime = 60 * 1000 * Math.pow(4, currentPair.streak); 
         currentPair.nextReview = Date.now() + bonusTime;
     } else {
         currentPair.streak = 0;
-        currentPair.nextReview = Date.now(); // Review immediately
+        currentPair.nextReview = Date.now();
     }
-    saveDb(); // Auto-save progress
+    saveDb();
 }
 
 function skipQuestion() {
@@ -140,27 +133,28 @@ async function toggleRecord() {
         mediaRecorder=new MediaRecorder(stream,{mimeType:mime}); audioChunks=[];
         mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
         
-        // ★ Stop Logic: Decode Audio for Visualization ★
         mediaRecorder.onstop= async ()=>{ 
             stream.getTracks().forEach(t=>t.stop()); 
             
-            // Create Blob
             const blob=new Blob(audioChunks,{type:mime}); 
             userAudioBlob=blob; 
             document.getElementById('replay-user-btn').style.display='block';
 
-            // Decode for Visualization
+            // Decode for Visualization History
             const arrayBuffer = await blob.arrayBuffer();
             const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            renderStaticResult(audioBuffer); // Show waveform/spectrogram of result
+            renderStaticResult(audioBuffer); 
 
-            // Send to AI
             sendToGemini(blob, mime); 
         };
 
         isRecording=true; hasSpoken=false; silenceStart=0;
         btn.classList.add('recording'); btn.innerText="■ Stop";
-        initCanvas(); visualize(); mediaRecorder.start();
+        
+        // Reset Visualizer
+        initCanvas(); 
+        visualize(); 
+        mediaRecorder.start();
     }catch(e){alert("Mic Error: "+e.message);}
 }
 
@@ -172,19 +166,19 @@ function stopRecordingInternal() {
     }
 }
 
-// ★ AI Coaching (Proposal 2) ★
+// ★ Prompt Update: Japanese Advice ★
 async function sendToGemini(blob, mime) {
     const k=document.getElementById('api-key').value, m=document.getElementById('model-select').value;
     const b64=await new Promise(r=>{const fr=new FileReader(); fr.onloadend=()=>r(fr.result.split(',')[1]); fr.readAsDataURL(blob);});
     
     const url=`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${k}`;
     
-    // Updated Prompt: Ask for JSON with Advice
+    // プロンプト修正: アドバイスを日本語で要求
     const promptText = `
     Listen to the audio. The user is trying to say the English word "${targetObj.w}".
     1. Identify the word heard.
-    2. If the pronunciation is wrong (especially if it sounds like "${(isLTarget?currentPair.r:currentPair.l).w}"), provide a VERY BRIEF 1-sentence tip on tongue position.
-    3. Return ONLY a JSON object: {"heard": "word", "correct": boolean, "advice": "string"}
+    2. If the pronunciation is wrong (especially if it sounds like "${(isLTarget?currentPair.r:currentPair.l).w}"), provide a VERY BRIEF 1-sentence tip on tongue position IN JAPANESE.
+    3. Return ONLY a JSON object: {"heard": "english_word", "correct": boolean, "advice": "japanese_string"}
     `;
 
     const p={contents:[{parts:[{text:promptText},{inline_data:{mime_type:mime.split(';')[0],data:b64}}]}]};
@@ -195,7 +189,6 @@ async function sendToGemini(blob, mime) {
         if(d.error) throw new Error(d.error.message);
         
         let rawText = d.candidates[0].content.parts[0].text;
-        // Clean markdown code blocks if any
         rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
         
         const result = JSON.parse(rawText);
@@ -217,7 +210,7 @@ function checkPronunciation(aiResult) {
     const cont=document.querySelector('.container');
     document.getElementById('rec-btn').classList.remove('processing'); document.getElementById('rec-btn').innerText="🎤 Start";
 
-    updateWordStats(isOk); // Save SRS stats
+    updateWordStats(isOk); 
     addToHistory(targetObj.w, inp, isOk);
 
     if(isOk){
@@ -228,8 +221,8 @@ function checkPronunciation(aiResult) {
         if(auto) setTimeout(()=>nextQuestion(true),1500); else document.getElementById('next-btn-spk').style.display='block';
     }else{
         sfx.wrong(); cont.classList.add('shake-anim');
-        // Show Advice
-        fb.innerHTML=`⚠️ ${inp}<br><small style="font-size:0.8rem; color:var(--text);">💡 ${aiResult.advice || "Try again!"}</small>`; 
+        // アドバイスを表示
+        fb.innerHTML=`⚠️ ${inp}<br><small style="font-size:0.8rem; color:var(--text); font-weight:bold;">💡 ${aiResult.advice || "もう一度トライ！"}</small>`; 
         fb.className="feedback incorrect"; streak=0;
     }
     updateStreakDisplay();
@@ -241,7 +234,7 @@ function checkListening(uL){
     document.getElementById('target-word').innerText=targetObj.w; document.getElementById('target-word').classList.remove('blur');
     document.getElementById('opponent-word').innerText=(isLTarget?currentPair.r:currentPair.l).w;
     
-    updateWordStats(correct); // Save SRS stats
+    updateWordStats(correct);
     addToHistory(targetObj.w, uL?"Selected L":"Selected R", correct);
     
     if(correct){
