@@ -1,0 +1,7 @@
+[
+  { "l": { "w":"Light", "b":[{"p":"l","t":"l_shape"},{"p":"ay","t":"wide"},{"p":"ay","t":"spread"},{"p":"t","t":"alveolar"}] }, "r": { "w":"Right", "b":[{"p":"r","t":"r_shape"},{"p":"ay","t":"wide"},{"p":"ay","t":"spread"},{"p":"t","t":"alveolar"}] } },
+  { "l": { "w":"Load", "b":[{"p":"l","t":"l_shape"},{"p":"ow","t":"round"},{"p":"w","t":"u_shape"},{"p":"d","t":"alveolar"}] }, "r": { "w":"Road", "b":[{"p":"r","t":"r_shape"},{"p":"ow","t":"round"},{"p":"w","t":"u_shape"},{"p":"d","t":"alveolar"}] } },
+  { "l": { "w":"Lead", "b":[{"p":"l","t":"l_shape"},{"p":"ea","t":"spread"},{"p":"d","t":"alveolar"}] }, "r": { "w":"Read", "b":[{"p":"r","t":"r_shape"},{"p":"ea","t":"spread"},{"p":"d","t":"alveolar"}] } },
+  { "l": { "w":"Lock", "b":[{"p":"l","t":"l_shape"},{"p":"o","t":"wide"},{"p":"ck","t":"velar"}] }, "r": { "w":"Rock", "b":[{"p":"r","t":"r_shape"},{"p":"o","t":"wide"},{"p":"ck","t":"velar"}] } },
+  { "l": { "w":"Fly", "b":[{"p":"f","t":"labiodental"},{"p":"l","t":"l_shape"},{"p":"ay","t":"wide"},{"p":"y","t":"spread"}] }, "r": { "w":"Fry", "b":[{"p":"f","t":"labiodental"},{"p":"r","t":"r_shape"},{"p":"ay","t":"wide"},{"p":"y","t":"spread"}] } }
+]
