@@ -347,14 +347,182 @@
     }
     function loadDb(){ const s=localStorage.getItem('lr_v24_db'); if(s) try{db=JSON.parse(s);}catch(e){} }
     function populateCategorySelect() { const s=document.getElementById('category-select'); s.innerHTML=''; Object.keys(db).forEach(k=>{const o=document.createElement('option');o.value=k;o.text=`${k} (${db[k].length})`;s.appendChild(o);}); if(db[currentCategory])s.value=currentCategory; }
-    function openDbManager() { document.getElementById('db-manager-modal').style.display='flex'; renderDbList(); document.getElementById('db-list-view').style.display='block'; document.getElementById('db-editor-view').style.display='none'; }
-    function closeDbManager() { document.getElementById('db-manager-modal').style.display='none'; populateCategorySelect(); changeCategory(); }
-    function renderDbList() {
-        const l=document.getElementById('db-level-list'); l.innerHTML='';
-        Object.keys(db).forEach(k=>{l.innerHTML+=`<li class="db-item"><span>${k} (${db[k].length})</span><div><button class="btn-small" onclick="editLevel('${k}')">Edit</button></div></li>`;});
+
+// --- script.js: DB Manager Logic Update ---
+
+let selectedLevel = null; // 現在選択中のレベル
+
+function openDbManager() {
+    document.getElementById('db-manager-modal').style.display = 'flex';
+    renderDbList();
+    // 初期状態: 何も選択されていない表示
+    document.getElementById('current-level-title').innerText = "Select a Level";
+    document.getElementById('word-table-container').innerHTML = '<p style="text-align:center; opacity:0.5; margin-top:50px;">👈 Select a level list</p>';
+    document.getElementById('level-actions').style.display = 'none';
+    document.getElementById('word-actions').style.display = 'none';
+}
+
+function renderDbList() {
+    const l = document.getElementById('db-level-list');
+    l.innerHTML = '';
+    Object.keys(db).forEach(k => {
+        const li = document.createElement('li');
+        li.className = 'db-item';
+        li.style.cursor = 'pointer';
+        // 選択中のスタイル適用
+        if (k === selectedLevel) li.style.background = 'rgba(128,128,128,0.1)';
+        
+        li.innerHTML = `<span>${k}</span> <span style="font-size:0.8rem; opacity:0.7;">(${db[k].length})</span>`;
+        li.onclick = () => selectLevel(k);
+        l.appendChild(li);
+    });
+}
+
+function selectLevel(k) {
+    selectedLevel = k;
+    renderDbList(); // ハイライト更新
+    document.getElementById('current-level-title').innerText = k;
+    document.getElementById('level-actions').style.display = 'flex';
+    document.getElementById('word-actions').style.display = 'block';
+    renderWordTable();
+}
+
+function renderWordTable() {
+    const container = document.getElementById('word-table-container');
+    const list = db[selectedLevel];
+    
+    if (!list || list.length === 0) {
+        container.innerHTML = '<p style="text-align:center; opacity:0.5; padding:20px;">No words yet. Add one!</p>';
+        return;
     }
-    function editLevel(k) { editingCategoryName=k; document.getElementById('db-list-view').style.display='none'; document.getElementById('db-editor-view').style.display='flex'; document.getElementById('editing-level-name').innerText=k; document.getElementById('level-json-editor').value=JSON.stringify(db[k],null,2); }
-    function cancelEditLevel() { document.getElementById('db-editor-view').style.display='none'; document.getElementById('db-list-view').style.display='block'; }
-    function saveLevel() { try{const j=JSON.parse(document.getElementById('level-json-editor').value); if(!Array.isArray(j))throw new Error("Arr needed"); db[editingCategoryName]=j; localStorage.setItem('lr_v24_db',JSON.stringify(db)); cancelEditLevel(); renderDbList(); }catch(e){alert("JSON Error");} }
-    function addNewLevel() { const n=prompt("Name:"); if(n&&!db[n]){db[n]=[]; localStorage.setItem('lr_v24_db',JSON.stringify(db)); renderDbList();} }
-    function resetDb(){if(confirm("Reset?")){db=defaultDb;localStorage.removeItem('lr_v24_db');closeDbManager();}}
+
+    let html = '<table style="width:100%; border-collapse: collapse; font-size:0.9rem;">';
+    html += '<tr style="border-bottom:2px solid rgba(128,128,128,0.2); text-align:left;"><th>L Word</th><th>R Word</th><th style="text-align:right;">Action</th></tr>';
+    
+    list.forEach((pair, idx) => {
+        // Phonemeデータがあるかどうかでアイコンを表示
+        const hasPhonemes = (pair.l.b && pair.l.b.length > 0);
+        const statusIcon = hasPhonemes ? '✅' : '⚠️'; // データなしなら警告
+        
+        html += `<tr style="border-bottom:1px solid rgba(128,128,128,0.1);">
+            <td style="padding:8px;">${pair.l.w}</td>
+            <td style="padding:8px;">${pair.r.w}</td>
+            <td style="padding:8px; text-align:right;">
+                <span title="${hasPhonemes ? 'Animation Ready' : 'No Animation Data'}" style="cursor:help; font-size:0.8rem; margin-right:10px;">${statusIcon}</span>
+                <button onclick="deletePair(${idx})" class="btn-small" style="background:var(--err);">Delete</button>
+            </td>
+        </tr>`;
+    });
+    html += '</table>';
+    container.innerHTML = html;
+}
+
+// --- CRUD Operations ---
+
+function addNewLevel() {
+    const n = prompt("New Level Name (e.g., 'Travel'):");
+    if (n && !db[n]) {
+        db[n] = [];
+        saveDb();
+        renderDbList();
+        selectLevel(n);
+    } else if(db[n]) {
+        alert("Level already exists!");
+    }
+}
+
+function deleteLevel() {
+    if (!selectedLevel) return;
+    if (confirm(`Delete level "${selectedLevel}" and all its words?`)) {
+        delete db[selectedLevel];
+        selectedLevel = null;
+        saveDb();
+        openDbManager(); // リセット
+    }
+}
+
+function addWordPair() {
+    if (!selectedLevel) return;
+    // シンプルに入力を求める
+    const lWord = prompt("Enter 'L' word (e.g., Light):");
+    if (!lWord) return;
+    const rWord = prompt("Enter 'R' word (e.g., Right):");
+    if (!rWord) return;
+
+    // 空のペアを追加（アニメーションデータ b: [] は空の状態）
+    // ※後述のAI生成を使わない場合、アニメーションは再生されませんがエラーにはなりません
+    db[selectedLevel].push({
+        l: { w: lWord, b: [] },
+        r: { w: rWord, b: [] }
+    });
+    saveDb();
+    renderWordTable();
+}
+
+function deletePair(idx) {
+    if (!selectedLevel) return;
+    if (confirm("Delete this pair?")) {
+        db[selectedLevel].splice(idx, 1);
+        saveDb();
+        renderWordTable();
+    }
+}
+
+// --- Import / Export ---
+
+function exportLevel() {
+    if (!selectedLevel) return;
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db[selectedLevel], null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `LR_Master_${selectedLevel}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+}
+
+function triggerImport() {
+    document.getElementById('import-file').click();
+}
+
+function importLevel(input) {
+    if (!selectedLevel) return;
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const json = JSON.parse(e.target.result);
+            if (!Array.isArray(json)) throw new Error("File must contain a list (array) of word pairs.");
+            
+            // 既存リストにマージするか、置換するか確認
+            if(confirm("Click OK to APPEND to existing list.\nClick Cancel to REPLACE existing list.")) {
+                db[selectedLevel] = db[selectedLevel].concat(json);
+            } else {
+                db[selectedLevel] = json;
+            }
+            
+            saveDb();
+            renderWordTable();
+            alert("Import successful!");
+        } catch (err) {
+            alert("Import failed: " + err.message);
+        }
+        input.value = ''; // リセット
+    };
+    reader.readAsText(file);
+}
+
+function saveDb() {
+    localStorage.setItem('lr_v24_db', JSON.stringify(db));
+}
+
+// 既存の resetDb も維持
+function resetDb(){
+    if(confirm("Reset all data to defaults? This cannot be undone.")){
+        db = defaultDb; 
+        localStorage.removeItem('lr_v24_db'); 
+        openDbManager();
+    }
+}
