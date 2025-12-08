@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L/R Master ガイド</title>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            display: grid; gap: 40px; grid-template-columns: 1fr; margin: 0; padding: 40px 0; place-items: center;
+            font-family: 'M PLUS Rounded 1c', sans-serif; color: #334155;
+        }
+        .slide-container {
+            background-color: #ffffff; border-radius: 24px; box-shadow: 0 20px 60px rgba(14, 165, 233, 0.15);
+            display: flex; flex-direction: column; width: 1280px; height: 720px;
+            justify-content: center; overflow: hidden; padding: 60px; position: relative;
+        }
+        h1 { font-size: 72px; color: #0284c7; margin: 0; }
+        h2 { font-size: 48px; color: #0369a1; margin-bottom: 20px; }
+        h3 { font-size: 28px; color: #0ea5e9; margin-bottom: 15px; }
+        p { font-size: 20px; line-height: 1.8; color: #475569; }
+        .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; width: 100%; align-items: center; }
+        
+        /* App Mockup CSS */
+        .phone-mockup {
+            width: 320px; height: 600px; background: #fff; border: 8px solid #1e293b; border-radius: 30px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2); overflow: hidden; position: relative; margin: 0 auto;
+            font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
+        }
+        .app-header { background: #f8fafc; padding: 10px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; }
+        .app-body { padding: 15px; flex-grow: 1; background: #f8fafc; }
+        .mock-btn { background: #2563eb; color: white; border: none; padding: 8px; border-radius: 8px; font-size: 12px; }
+        .mock-vis { height: 40px; background: #020617; border-radius: 6px; margin: 10px 0; display: flex; align-items: flex-end; justify-content: center; gap:2px; }
+        .mock-bar { width: 4px; background: #3b82f6; }
+        .mock-word { font-size: 32px; font-weight: 800; color: #0f172a; text-align: center; margin: 10px 0; }
+        
+        .step-badge { background: #0284c7; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; margin-right: 15px; flex-shrink: 0; }
+        .instruction-item { display: flex; align-items: flex-start; margin-bottom: 25px; }
+        
+        .highlight { color: #0284c7; font-weight: bold; background: #e0f2fe; padding: 2px 8px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<!-- Slide 1: Intro -->
+<div class="slide-container" style="background-image: url('http://googleusercontent.com/image_collection/image_retrieval/6928649152142942800'); background-size: cover;">
+    <div style="background: rgba(255,255,255,0.9); padding: 60px; border-radius: 30px; text-align: center;">
+        <h1>L/R Master ガイド</h1>
+        <p style="font-size: 30px; font-weight: bold; color: #64748b;">AI搭載・発音矯正の決定版</p>
+        <div style="margin-top: 30px;">
+            <span class="highlight">iPhone対応</span>
+            <span class="highlight">完全ハンズフリー</span>
+            <span class="highlight">Gemini AI</span>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 2: Setup -->
+<div class="slide-container">
+    <h2>Step 1: 初期設定</h2>
+    <div class="two-column">
+        <div>
+            <div class="instruction-item">
+                <div class="step-badge">1</div>
+                <div>
+                    <h3>設定を開く</h3>
+                    <p>右上の <i class="fa-solid fa-gear" style="color:#2563eb;"></i> をタップ。</p>
+                </div>
+            </div>
+            <div class="instruction-item">
+                <div class="step-badge">2</div>
+                <div>
+                    <h3>APIキー入力</h3>
+                    <p>Google AI Studioのキーを入力し「Update Models」を押します。</p>
+                </div>
+            </div>
+            <div class="instruction-item">
+                <div class="step-badge">3</div>
+                <div>
+                    <h3>モデル選択</h3>
+                    <p><code>gemini-1.5-flash</code> を選び「Save」します。</p>
+                </div>
+            </div>
+        </div>
+        <div class="phone-mockup">
+            <div class="app-header"><span>L/R Master</span><span>⚙️</span></div>
+            <div style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center;">
+                <div style="background:white; width:80%; padding:15px; border-radius:10px;">
+                    <h3>⚙️ API Settings</h3>
+                    <input type="text" value="AIzaSy..." style="width:100%; padding:5px; margin:5px 0;">
+                    <div style="background:#2563eb; color:white; padding:5px; text-align:center; border-radius:5px;">Save</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 3: Speaking -->
+<div class="slide-container">
+    <h2>Step 2: 発音トレーニング</h2>
+    <div class="two-column">
+        <div class="phone-mockup">
+            <div class="app-header"><span>L/R Master</span><span>⚙️</span></div>
+            <div class="app-body">
+                <div style="text-align:center;">
+                    <button class="mock-btn">🎤 Speak</button>
+                    <button class="mock-btn" style="background:white; color:#333; border:1px solid #ccc;">👂 Listen</button>
+                </div>
+                <div class="mock-vis">
+                    <div class="mock-bar" style="height:50%"></div><div class="mock-bar" style="height:80%"></div><div class="mock-bar" style="height:30%"></div>
+                </div>
+                <div class="mock-word">Light</div>
+                <div style="text-align:center; color:#666;">vs Right</div>
+                <button class="mock-btn" style="width:100%; margin-top:20px; background:#ef4444;">■ Stop (Auto)</button>
+            </div>
+        </div>
+        <div>
+            <h3>ハンズフリー機能</h3>
+            <p><strong>Auto Stop</strong> と <strong>Auto Next</strong> をONにすれば、スマホに触れることなくトレーニングできます。</p>
+            <ul>
+                <li>🗣️ 話すと自動で録音</li>
+                <li>🤫 黙ると自動で判定</li>
+                <li>✅ 正解すると自動で次へ</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 4: Listening -->
+<div class="slide-container">
+    <h2>Step 3: リスニング特訓</h2>
+    <div class="two-column">
+        <div>
+            <h3>視覚情報の遮断</h3>
+            <p>文字数でバレないよう、問題文は <strong>"?????"</strong> と表示されます。</p>
+            <p>純粋に耳だけで「Light」か「Right」かを聞き分け、ボタンを選択してください。</p>
+            <p>正解すると、初めて単語が表示されます。</p>
+        </div>
+        <div class="phone-mockup">
+            <div class="app-header"><span>L/R Master</span><span>⚙️</span></div>
+            <div class="app-body">
+                <div style="text-align:center;">
+                    <button class="mock-btn" style="background:white; color:#333; border:1px solid #ccc;">🎤 Speak</button>
+                    <button class="mock-btn">👂 Listen</button>
+                </div>
+                <div class="mock-vis" style="opacity:0.5;"></div>
+                <div class="mock-word" style="color:transparent; text-shadow:0 0 10px rgba(0,0,0,0.5);">?????</div>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button class="mock-btn" style="flex:1; background:white; color:#2563eb; border:2px solid #2563eb; font-size:16px;">Light</button>
+                    <button class="mock-btn" style="flex:1; background:white; color:#2563eb; border:2px solid #2563eb; font-size:16px;">Right</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 5: DB & Customize -->
+<div class="slide-container">
+    <h2>カスタマイズ機能</h2>
+    <div class="tiled-content" style="display:flex; gap:20px; width:100%;">
+        <div class="tile" style="flex:1; background:#f8fafc; padding:30px; border-radius:20px; text-align:center;">
+            <i class="fa-solid fa-database" style="font-size:50px; color:#3b82f6; margin-bottom:20px;"></i>
+            <h3>DBマネージャー</h3>
+            <p>「📝」ボタンから、苦手な単語だけのオリジナルリストを作成・編集できます。</p>
+        </div>
+        <div class="tile" style="flex:1; background:#f8fafc; padding:30px; border-radius:20px; text-align:center;">
+            <i class="fa-solid fa-gauge-high" style="font-size:50px; color:#3b82f6; margin-bottom:20px;"></i>
+            <h3>スピード調整</h3>
+            <p>設定画面で再生速度を 0.5倍〜1.5倍 に変更可能。速聴トレーニングにも。</p>
+        </div>
+        <div class="tile" style="flex:1; background:#f8fafc; padding:30px; border-radius:20px; text-align:center;">
+            <i class="fa-solid fa-rotate-left" style="font-size:50px; color:#3b82f6; margin-bottom:20px;"></i>
+            <h3>セルフリプレイ</h3>
+            <p>判定後、「自分の声」を聞き直せます。客観的なチェックに最適です。</p>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 6: End -->
+<div class="slide-container" style="background:#0f172a; color:white;">
+    <h1>Let's Start!</h1>
+    <p style="color:#94a3b8; font-size:24px;">準備はできましたか？</p>
+    <a href="index.html" style="background:#0284c7; color:white; padding:20px 50px; text-decoration:none; border-radius:50px; font-weight:bold; font-size:24px; margin-top:40px; display:inline-block; box-shadow:0 0 20px #0284c7;">アプリを起動する</a>
+</div>
+
+</body>
+</html>
+
+
