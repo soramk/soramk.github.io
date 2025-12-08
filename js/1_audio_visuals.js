@@ -53,23 +53,25 @@ const visemes = {
 };
 
 // --- Visualizer & UI Helpers ---
-let specCanvas = null; // Offscreen canvas for spectrogram history
-let lastAudioBuffer = null; // Store recorded buffer for static display
+let specCanvas = null; 
+let lastAudioBuffer = null; 
 
 function initCanvas(){ 
     const c=document.getElementById("visualizer"), b=document.querySelector(".visualizer-box"), d=window.devicePixelRatio||1; 
     c.width=b.clientWidth*d; c.height=b.clientHeight*d; 
     canvasCtx=c.getContext("2d"); canvasCtx.scale(d,d); 
     
-    // Init spectrogram history canvas
     if(!specCanvas) {
         specCanvas = document.createElement('canvas');
-        specCanvas.width = 1000; specCanvas.height = 256; // Fixed resolution for FFT
+        specCanvas.width = 1000; specCanvas.height = 256; 
     }
     
-    // If not recording but we have data, redraw static
-    if(!isRecording && lastAudioBuffer) renderStaticResult(lastAudioBuffer);
-    else { canvasCtx.fillStyle='#020617'; canvasCtx.fillRect(0,0,b.clientWidth,b.clientHeight); }
+    // 静的表示（録音していない時）
+    if(!isRecording && lastAudioBuffer) {
+        renderStaticResult(lastAudioBuffer);
+    } else { 
+        canvasCtx.fillStyle='#020617'; canvasCtx.fillRect(0,0,b.clientWidth,b.clientHeight); 
+    }
 }
 
 function toggleVisMode() {
@@ -78,43 +80,71 @@ function toggleVisMode() {
     else if (visMode === 'spectrogram') visMode = 'frequency';
     else visMode = 'wave';
 
-    document.getElementById('vis-label').innerText = visMode.toUpperCase();
+    // ラベル更新
+    const label = document.getElementById('vis-label');
+    if(visMode === 'wave') label.innerText = "WAVE";
+    else if(visMode === 'spectrogram') label.innerText = "SPECTROGRAM";
+    else label.innerText = "BARS";
     
-    // If idle, immediately redraw with new mode
+    // 静的表示の再描画
     if(!isRecording && lastAudioBuffer) renderStaticResult(lastAudioBuffer);
 }
 
-// リアルタイム描画 (Live)
+// ★ リアルタイム描画 & VADロジック修正 ★
 function visualize(){
     if(!isRecording) return;
     requestAnimationFrame(visualize);
     
     const ctx=canvasCtx, w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
-    
+    ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
+
+    // 1. まず周波数データを取得 (VADとスペクトログラム用)
+    analyser.getByteFrequencyData(dataArray);
+
+    // 2. VAD (Voice Activity Detection) - モードに関わらず実行
+    let sum = 0;
+    for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
+    const vol = Math.floor((sum/dataArray.length)*2); 
+    document.getElementById('mic-debug').innerText=`Vol: ${vol}%`;
+
+    if(document.getElementById('toggle-auto-stop').checked){
+        if(vol > VAD_THRESHOLD){ hasSpoken=true; silenceStart=Date.now(); }
+        else if(hasSpoken && Date.now()-silenceStart > VAD_SILENCE){ 
+            toggleRecord(); 
+            hasSpoken=false; 
+            return; // Stop rendering if stopped
+        }
+    }
+
+    // 3. 描画ロジック分岐
     if(visMode === 'spectrogram') {
-        // Scrolling Spectrogram
-        analyser.getByteFrequencyData(dataArray);
+        // --- Spectrogram ---
         const specCtx = specCanvas.getContext('2d');
-        
-        // Shift existing image left
-        specCtx.drawImage(specCanvas, -1, 0);
-        
-        // Draw new column at right
+        specCtx.drawImage(specCanvas, -1, 0); // Shift left
         for(let i=0; i<dataArray.length; i++){
             const val = dataArray[i];
             const y = specCanvas.height - (i / dataArray.length) * specCanvas.height;
-            // Heatmap color: Blue(low) -> Red(mid) -> Yellow(high)
             const hue = 240 - (val / 255) * 240; 
             specCtx.fillStyle = `hsl(${hue}, 100%, 50%)`;
             specCtx.fillRect(specCanvas.width-1, y, 1, 2);
         }
-        
-        // Render to main canvas (stretch to fit)
         ctx.drawImage(specCanvas, 0, 0, specCanvas.width, specCanvas.height, 0, 0, w, h);
 
-    } else if (visMode === 'wave') {
-        analyser.getByteTimeDomainData(dataArray);
-        ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
+    } else if (visMode === 'frequency') {
+        // --- Frequency Bars ---
+        const barW = (w / dataArray.length) * 2.5; let x=0;
+        for(let i=0; i<dataArray.length; i++) {
+            const barH = (dataArray[i] / 255) * h;
+            ctx.fillStyle = `rgb(${barH+100}, 50, 255)`;
+            ctx.fillRect(x, h-barH, barW, barH);
+            x += barW + 1;
+        }
+
+    } else {
+        // --- Waveform ---
+        // ※波形描画のためにデータを上書き取得
+        analyser.getByteTimeDomainData(dataArray); 
+        
         ctx.lineWidth=2; ctx.strokeStyle='#0ea5e9'; ctx.beginPath();
         const slice=w*1.0/dataArray.length; let x=0;
         for(let i=0;i<dataArray.length;i++){
@@ -122,52 +152,32 @@ function visualize(){
             if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); x+=slice;
         }
         ctx.stroke();
-    } else {
-        // Frequency Bars
-        analyser.getByteFrequencyData(dataArray);
-        ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
-        const barW = (w / dataArray.length) * 2.5; let x=0; let sum=0;
-        for(let i=0; i<dataArray.length; i++) {
-            const barH = (dataArray[i] / 255) * h;
-            sum += dataArray[i];
-            ctx.fillStyle = `rgb(${barH+100}, 50, 255)`;
-            ctx.fillRect(x, h-barH, barW, barH);
-            x += barW + 1;
-        }
-        const vol=Math.floor((sum/dataArray.length)*2); 
-        document.getElementById('mic-debug').innerText=`Vol: ${vol}%`;
-        // VAD Logic
-        if(document.getElementById('toggle-auto-stop').checked){
-            if(vol>VAD_THRESHOLD){ hasSpoken=true; silenceStart=Date.now(); }
-            else if(hasSpoken && Date.now()-silenceStart>VAD_SILENCE){ toggleRecord(); hasSpoken=false; }
-        }
     }
 }
 
 // 録音完了後の静的描画 (Result)
 function renderStaticResult(buffer) {
-    lastAudioBuffer = buffer; // Save for toggling
+    lastAudioBuffer = buffer; 
     const ctx = canvasCtx;
     const w = ctx.canvas.width / (window.devicePixelRatio||1);
     const h = ctx.canvas.height / (window.devicePixelRatio||1);
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
 
-    const data = buffer.getChannelData(0);
-
     if(visMode === 'spectrogram') {
-        // Draw Static Spectrogram (Simplified FFT over time)
-        // Note: generating a full high-res spectrogram locally is heavy, 
-        // so we reuse the 'specCanvas' if it was capturing, 
-        // OR simply just show the captured image.
-        // For simplicity, we just keep showing the specCanvas content captured during recording.
+        // スペクトログラムの履歴を表示
         ctx.drawImage(specCanvas, 0, 0, specCanvas.width, specCanvas.height, 0, 0, w, h);
-        
         ctx.font = "12px sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.5)";
         ctx.fillText("Recorded Spectrogram", 10, 20);
 
-    } else if (visMode === 'wave') {
-        // Draw Full Waveform
+    } else if (visMode === 'frequency') {
+        // 静止画では周波数は出せないのでメッセージのみ
+        ctx.font = "12px sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.fillText("Frequency view not available for static audio", 10, 20);
+
+    } else {
+        // Waveform Draw
+        const data = buffer.getChannelData(0);
         const step = Math.ceil(data.length / w);
         const amp = h / 2;
         ctx.fillStyle = '#0ea5e9';
@@ -183,10 +193,6 @@ function renderStaticResult(buffer) {
         }
         ctx.font = "12px sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.5)";
         ctx.fillText("Recorded Waveform", 10, 20);
-    } else {
-        // Frequency average (Spectrum)
-        ctx.font = "12px sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.5)";
-        ctx.fillText("Avg Frequency Spectrum (N/A for static)", 10, 20);
     }
 }
 
