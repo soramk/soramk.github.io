@@ -53,27 +53,68 @@ const visemes = {
 };
 
 // --- Visualizer & UI Helpers ---
+let specCanvas = null; // Offscreen canvas for spectrogram history
+let lastAudioBuffer = null; // Store recorded buffer for static display
+
 function initCanvas(){ 
     const c=document.getElementById("visualizer"), b=document.querySelector(".visualizer-box"), d=window.devicePixelRatio||1; 
     c.width=b.clientWidth*d; c.height=b.clientHeight*d; 
     canvasCtx=c.getContext("2d"); canvasCtx.scale(d,d); 
-    canvasCtx.fillStyle='#020617'; canvasCtx.fillRect(0,0,b.clientWidth,b.clientHeight); 
+    
+    // Init spectrogram history canvas
+    if(!specCanvas) {
+        specCanvas = document.createElement('canvas');
+        specCanvas.width = 1000; specCanvas.height = 256; // Fixed resolution for FFT
+    }
+    
+    // If not recording but we have data, redraw static
+    if(!isRecording && lastAudioBuffer) renderStaticResult(lastAudioBuffer);
+    else { canvasCtx.fillStyle='#020617'; canvasCtx.fillRect(0,0,b.clientWidth,b.clientHeight); }
 }
 
 function toggleVisMode() {
-    visMode = (visMode === 'frequency') ? 'wave' : 'frequency';
-    document.getElementById('vis-label').innerText = (visMode === 'frequency') ? 'BARS' : 'WAVE';
+    // Cycle: Wave -> Spectrogram -> Frequency
+    if (visMode === 'wave') visMode = 'spectrogram';
+    else if (visMode === 'spectrogram') visMode = 'frequency';
+    else visMode = 'wave';
+
+    document.getElementById('vis-label').innerText = visMode.toUpperCase();
+    
+    // If idle, immediately redraw with new mode
+    if(!isRecording && lastAudioBuffer) renderStaticResult(lastAudioBuffer);
 }
 
+// リアルタイム描画 (Live)
 function visualize(){
     if(!isRecording) return;
     requestAnimationFrame(visualize);
     
     const ctx=canvasCtx, w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
-    ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
     
-    if (visMode === 'wave') {
+    if(visMode === 'spectrogram') {
+        // Scrolling Spectrogram
+        analyser.getByteFrequencyData(dataArray);
+        const specCtx = specCanvas.getContext('2d');
+        
+        // Shift existing image left
+        specCtx.drawImage(specCanvas, -1, 0);
+        
+        // Draw new column at right
+        for(let i=0; i<dataArray.length; i++){
+            const val = dataArray[i];
+            const y = specCanvas.height - (i / dataArray.length) * specCanvas.height;
+            // Heatmap color: Blue(low) -> Red(mid) -> Yellow(high)
+            const hue = 240 - (val / 255) * 240; 
+            specCtx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+            specCtx.fillRect(specCanvas.width-1, y, 1, 2);
+        }
+        
+        // Render to main canvas (stretch to fit)
+        ctx.drawImage(specCanvas, 0, 0, specCanvas.width, specCanvas.height, 0, 0, w, h);
+
+    } else if (visMode === 'wave') {
         analyser.getByteTimeDomainData(dataArray);
+        ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
         ctx.lineWidth=2; ctx.strokeStyle='#0ea5e9'; ctx.beginPath();
         const slice=w*1.0/dataArray.length; let x=0;
         for(let i=0;i<dataArray.length;i++){
@@ -82,7 +123,9 @@ function visualize(){
         }
         ctx.stroke();
     } else {
+        // Frequency Bars
         analyser.getByteFrequencyData(dataArray);
+        ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
         const barW = (w / dataArray.length) * 2.5; let x=0; let sum=0;
         for(let i=0; i<dataArray.length; i++) {
             const barH = (dataArray[i] / 255) * h;
@@ -93,10 +136,57 @@ function visualize(){
         }
         const vol=Math.floor((sum/dataArray.length)*2); 
         document.getElementById('mic-debug').innerText=`Vol: ${vol}%`;
+        // VAD Logic
         if(document.getElementById('toggle-auto-stop').checked){
             if(vol>VAD_THRESHOLD){ hasSpoken=true; silenceStart=Date.now(); }
             else if(hasSpoken && Date.now()-silenceStart>VAD_SILENCE){ toggleRecord(); hasSpoken=false; }
         }
+    }
+}
+
+// 録音完了後の静的描画 (Result)
+function renderStaticResult(buffer) {
+    lastAudioBuffer = buffer; // Save for toggling
+    const ctx = canvasCtx;
+    const w = ctx.canvas.width / (window.devicePixelRatio||1);
+    const h = ctx.canvas.height / (window.devicePixelRatio||1);
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
+
+    const data = buffer.getChannelData(0);
+
+    if(visMode === 'spectrogram') {
+        // Draw Static Spectrogram (Simplified FFT over time)
+        // Note: generating a full high-res spectrogram locally is heavy, 
+        // so we reuse the 'specCanvas' if it was capturing, 
+        // OR simply just show the captured image.
+        // For simplicity, we just keep showing the specCanvas content captured during recording.
+        ctx.drawImage(specCanvas, 0, 0, specCanvas.width, specCanvas.height, 0, 0, w, h);
+        
+        ctx.font = "12px sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.fillText("Recorded Spectrogram", 10, 20);
+
+    } else if (visMode === 'wave') {
+        // Draw Full Waveform
+        const step = Math.ceil(data.length / w);
+        const amp = h / 2;
+        ctx.fillStyle = '#0ea5e9';
+        ctx.beginPath();
+        for (let i = 0; i < w; i++) {
+            let min = 1.0; let max = -1.0;
+            for (let j = 0; j < step; j++) {
+                const datum = data[(i * step) + j];
+                if (datum < min) min = datum;
+                if (datum > max) max = datum;
+            }
+            ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
+        }
+        ctx.font = "12px sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.fillText("Recorded Waveform", 10, 20);
+    } else {
+        // Frequency average (Spectrum)
+        ctx.font = "12px sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.fillText("Avg Frequency Spectrum (N/A for static)", 10, 20);
     }
 }
 
