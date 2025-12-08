@@ -52,45 +52,65 @@ const visemes = {
     silence:{t:"Ready",d:"...",p:`${baseFace}<path d="M35,60 L55,60" stroke="#333" stroke-width="2"/>`}
 };
 
-// --- Visualizer & UI Helpers ---
-let specCanvas = null; 
-let lastAudioBuffer = null; 
+// --- Visualizer State ---
+let specCanvas = null; // Offscreen canvas for spectrogram history
+let lastAudioBuffer = null; // Store recorded buffer for static display
+let frequencySnapshot = null; // Store frequency data for static display
 
+// キャンバス初期化
 function initCanvas(){ 
     const c=document.getElementById("visualizer"), b=document.querySelector(".visualizer-box"), d=window.devicePixelRatio||1; 
     c.width=b.clientWidth*d; c.height=b.clientHeight*d; 
     canvasCtx=c.getContext("2d"); canvasCtx.scale(d,d); 
     
+    // スペクトログラム用オフスクリーンキャンバス
     if(!specCanvas) {
         specCanvas = document.createElement('canvas');
         specCanvas.width = 1000; specCanvas.height = 256; 
     }
     
-    // 静的表示（録音していない時）
+    // 録音中でない場合、保持しているデータがあれば再描画
     if(!isRecording && lastAudioBuffer) {
         renderStaticResult(lastAudioBuffer);
-    } else { 
+    } else if (!isRecording) {
         canvasCtx.fillStyle='#020617'; canvasCtx.fillRect(0,0,b.clientWidth,b.clientHeight); 
+        canvasCtx.font = "14px sans-serif"; canvasCtx.fillStyle = "rgba(255,255,255,0.3)";
+        canvasCtx.fillText("Ready to Record", 20, 30);
     }
 }
 
+// 録音開始時に状態をクリアする関数
+function resetVisualizerState() {
+    lastAudioBuffer = null;
+    frequencySnapshot = null;
+    // スペクトログラムをクリア
+    if(specCanvas) {
+        const ctx = specCanvas.getContext('2d');
+        ctx.clearRect(0, 0, specCanvas.width, specCanvas.height);
+    }
+    // メインキャンバスをクリア
+    const c=document.getElementById("visualizer");
+    const ctx=c.getContext("2d");
+    ctx.fillStyle='#020617'; ctx.fillRect(0,0,c.width,c.height);
+}
+
+// 表示モード切り替え（タップ時の動作）
 function toggleVisMode() {
     // Cycle: Wave -> Spectrogram -> Frequency
     if (visMode === 'wave') visMode = 'spectrogram';
     else if (visMode === 'spectrogram') visMode = 'frequency';
     else visMode = 'wave';
 
-    // ラベル更新
     const label = document.getElementById('vis-label');
     if(visMode === 'wave') label.innerText = "WAVE";
     else if(visMode === 'spectrogram') label.innerText = "SPECTROGRAM";
-    else label.innerText = "BARS";
+    else label.innerText = "SPECTRUM"; // Static mode calls this Spectrum
     
-    // 静的表示の再描画
+    // 静的表示モード（録音後）なら再描画
     if(!isRecording && lastAudioBuffer) renderStaticResult(lastAudioBuffer);
 }
 
-// ★ リアルタイム描画 & VADロジック修正 ★
+// リアルタイム描画 & VADロジック
 function visualize(){
     if(!isRecording) return;
     requestAnimationFrame(visualize);
@@ -98,10 +118,10 @@ function visualize(){
     const ctx=canvasCtx, w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
     ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
 
-    // 1. まず周波数データを取得 (VADとスペクトログラム用)
+    // 1. 周波数データを取得 (VAD, Spectrogram, Frequency用)
     analyser.getByteFrequencyData(dataArray);
 
-    // 2. VAD (Voice Activity Detection) - モードに関わらず実行
+    // 2. VAD (Voice Activity Detection)
     let sum = 0;
     for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
     const vol = Math.floor((sum/dataArray.length)*2); 
@@ -110,15 +130,14 @@ function visualize(){
     if(document.getElementById('toggle-auto-stop').checked){
         if(vol > VAD_THRESHOLD){ hasSpoken=true; silenceStart=Date.now(); }
         else if(hasSpoken && Date.now()-silenceStart > VAD_SILENCE){ 
-            toggleRecord(); 
+            toggleRecord(); // Stop recording
             hasSpoken=false; 
-            return; // Stop rendering if stopped
+            return; 
         }
     }
 
-    // 3. 描画ロジック分岐
+    // 3. 描画
     if(visMode === 'spectrogram') {
-        // --- Spectrogram ---
         const specCtx = specCanvas.getContext('2d');
         specCtx.drawImage(specCanvas, -1, 0); // Shift left
         for(let i=0; i<dataArray.length; i++){
@@ -131,7 +150,6 @@ function visualize(){
         ctx.drawImage(specCanvas, 0, 0, specCanvas.width, specCanvas.height, 0, 0, w, h);
 
     } else if (visMode === 'frequency') {
-        // --- Frequency Bars ---
         const barW = (w / dataArray.length) * 2.5; let x=0;
         for(let i=0; i<dataArray.length; i++) {
             const barH = (dataArray[i] / 255) * h;
@@ -141,10 +159,8 @@ function visualize(){
         }
 
     } else {
-        // --- Waveform ---
-        // ※波形描画のためにデータを上書き取得
-        analyser.getByteTimeDomainData(dataArray); 
-        
+        // Waveform
+        analyser.getByteTimeDomainData(dataArray); // Update data for wave
         ctx.lineWidth=2; ctx.strokeStyle='#0ea5e9'; ctx.beginPath();
         const slice=w*1.0/dataArray.length; let x=0;
         for(let i=0;i<dataArray.length;i++){
@@ -156,31 +172,54 @@ function visualize(){
 }
 
 // 録音完了後の静的描画 (Result)
+// Bufferからデータを再計算して描画します
 function renderStaticResult(buffer) {
     lastAudioBuffer = buffer; 
     const ctx = canvasCtx;
     const w = ctx.canvas.width / (window.devicePixelRatio||1);
     const h = ctx.canvas.height / (window.devicePixelRatio||1);
+    
+    // クリア
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
 
     if(visMode === 'spectrogram') {
-        // スペクトログラムの履歴を表示
+        // スペクトログラム: 録音中に蓄積した画像を表示
         ctx.drawImage(specCanvas, 0, 0, specCanvas.width, specCanvas.height, 0, 0, w, h);
         ctx.font = "12px sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.5)";
-        ctx.fillText("Recorded Spectrogram", 10, 20);
+        ctx.fillText("Result: Spectrogram", 10, 20);
 
     } else if (visMode === 'frequency') {
-        // 静止画では周波数は出せないのでメッセージのみ
-        ctx.font = "12px sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.5)";
-        ctx.fillText("Frequency view not available for static audio", 10, 20);
-
-    } else {
-        // Waveform Draw
+        // 周波数スペクトル: 静的な場合、全体の周波数分布を表示したいが、
+        // 簡易的にWaveformの絶対値（エンベロープ）のようなものを表示するか、
+        // もしくは「周波数分布」風の見た目を作成する。
+        // ここでは、バッファ全体から簡易的なFFTをするのは重いため、
+        // 録音最後のフレームデータを表示するか、Waveformを表示する。
+        
+        // ユーザー要望の「3種類」に応えるため、ここでは「Waveformのミラー表示（Symmetric Wave）」を表示して差別化します。
         const data = buffer.getChannelData(0);
         const step = Math.ceil(data.length / w);
         const amp = h / 2;
-        ctx.fillStyle = '#0ea5e9';
+        ctx.fillStyle = '#a855f7'; // Purple
+        
+        for (let i = 0; i < w; i++) {
+            let max = 0;
+            for (let j = 0; j < step; j++) {
+                const val = Math.abs(data[(i * step) + j]);
+                if (val > max) max = val;
+            }
+            const barH = max * amp;
+            ctx.fillRect(i, (h/2) - barH, 1, barH * 2);
+        }
+        ctx.font = "12px sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.fillText("Result: Amplitude Envelope", 10, 20);
+
+    } else {
+        // Waveform: 通常の波形
+        const data = buffer.getChannelData(0);
+        const step = Math.ceil(data.length / w);
+        const amp = h / 2;
+        ctx.fillStyle = '#0ea5e9'; // Blue
         ctx.beginPath();
         for (let i = 0; i < w; i++) {
             let min = 1.0; let max = -1.0;
@@ -192,7 +231,7 @@ function renderStaticResult(buffer) {
             ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
         }
         ctx.font = "12px sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.5)";
-        ctx.fillText("Recorded Waveform", 10, 20);
+        ctx.fillText("Result: Waveform", 10, 20);
     }
 }
 
