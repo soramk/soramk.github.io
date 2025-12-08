@@ -91,26 +91,26 @@ async function loadDb() {
         }
     }
 
-    // 2. なければJSONファイルから読み込み
-    console.log("Fetching default JSON files...");
+    // 2. JSファイルから読み込まれた変数を使用
+    // fetch は使いません（CORS回避のため）
+    console.log("Loading default datasets from window objects...");
+    
     db = {};
     
-    // 全ファイルを並列で取得
-    const promises = defaultCategories.map(async (cat) => {
-        try {
-            // キャッシュ対策でタイムスタンプを付与しても良いが、今回はシンプルに
-            const res = await fetch(`data/${cat}.json`);
-            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-            const data = await res.json();
-            db[cat] = data;
-        } catch (e) {
-            console.error(`Failed to load ${cat}.json:`, e);
-            db[cat] = []; // 読み込み失敗時は空配列
-        }
-    });
+    // JSファイルで定義した window.dataset_xxx を参照する
+    if (typeof window.dataset_basic !== 'undefined') db['basic'] = window.dataset_basic;
+    else db['basic'] = [];
 
-    await Promise.all(promises);
-    console.log("Default DB loaded:", Object.keys(db));
+    if (typeof window.dataset_intermediate !== 'undefined') db['intermediate'] = window.dataset_intermediate;
+    else db['intermediate'] = [];
+
+    if (typeof window.dataset_advanced !== 'undefined') db['advanced'] = window.dataset_advanced;
+    else db['advanced'] = [];
+
+    if (typeof window.dataset_business !== 'undefined') db['business'] = window.dataset_business;
+    else db['business'] = [];
+
+    console.log("Default DB loaded keys:", Object.keys(db));
 }
 
 // --- Core Logic ---
