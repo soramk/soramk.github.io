@@ -101,6 +101,10 @@ function startAudioVisualization(stream) {
     analyser.smoothingTimeConstant = 0.8;
     dataArray = new Uint8Array(analyser.frequencyBinCount);
     
+    // ★ リセット時にスペクトル合計用配列も作り直す
+    frequencySum = new Float32Array(analyser.frequencyBinCount);
+    frequencyCount = 0;
+
     // 古いソースがあれば切断
     if(audioSourceNode) audioSourceNode.disconnect();
     
@@ -114,11 +118,8 @@ function startAudioVisualization(stream) {
 
 function resetVisualizerState() {
     lastAudioBuffer = null;
-    // ★ 修正: 配列の初期化を確実に
-    if(analyser) {
-        frequencySum = new Float32Array(analyser.frequencyBinCount); 
-    }
     frequencyCount = 0;
+    if(frequencySum) frequencySum.fill(0); // ゼロクリア
     
     if(specCanvas) {
         const ctx = specCanvas.getContext('2d');
@@ -154,6 +155,7 @@ function updateVisExplanation() {
     }
 }
 
+// ★ Visualize Loop
 function visualize(){
     if(!isRecording) return;
     requestAnimationFrame(visualize);
@@ -163,7 +165,7 @@ function visualize(){
     // 常に周波数データを取得
     analyser.getByteFrequencyData(dataArray);
 
-    // Spectrum用データの蓄積
+    // Spectrum用データの蓄積 (安全策追加)
     if(frequencySum && frequencySum.length === dataArray.length) {
         for(let i=0; i<dataArray.length; i++) frequencySum[i] += dataArray[i];
         frequencyCount++;
