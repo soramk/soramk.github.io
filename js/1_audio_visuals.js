@@ -90,6 +90,7 @@ function initCanvas(){
     }
 }
 
+// ★ 修正: マイクストリームを受け取り、AudioContextをセットアップ
 function startAudioVisualization(stream) {
     if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -100,13 +101,14 @@ function startAudioVisualization(stream) {
     analyser.smoothingTimeConstant = 0.8;
     dataArray = new Uint8Array(analyser.frequencyBinCount);
     
-    // リセット時にスペクトル合計用配列も作り直す
+    // スペクトル合計用配列の初期化
     frequencySum = new Float32Array(analyser.frequencyBinCount);
     frequencyCount = 0;
 
     // 古いソースがあれば切断
     if(audioSourceNode) audioSourceNode.disconnect();
     
+    // 新しいストリームを接続
     audioSourceNode = audioCtx.createMediaStreamSource(stream);
     audioSourceNode.connect(analyser);
     
@@ -164,7 +166,7 @@ function visualize(){
     // 常に周波数データを取得
     analyser.getByteFrequencyData(dataArray);
 
-    // Spectrum用データの蓄積
+    // Spectrum用データの蓄積 (安全策追加)
     if(frequencySum && frequencySum.length === dataArray.length) {
         for(let i=0; i<dataArray.length; i++) frequencySum[i] += dataArray[i];
         frequencyCount++;
@@ -190,8 +192,7 @@ function visualize(){
 
     const autoStop = document.getElementById('toggle-auto-stop');
     
-    // ★修正: Web Speech API ('web') の場合は、アプリ側のAuto Stopを強制的に無効化する
-    // ブラウザ自身の発話終了検知機能と競合させないため
+    // ★重要: Web Speech API ('web') の場合は、アプリ側のAuto Stopを無効化
     if(autoStop && autoStop.checked && currentProvider !== 'web'){
         if(vol > VAD_THRESHOLD){ hasSpoken=true; silenceStart=Date.now(); }
         else if(hasSpoken && Date.now()-silenceStart > VAD_SILENCE){ 

@@ -115,14 +115,13 @@ async function sendToOpenAI(blob, mime) {
     }
 }
 
-// --- 3. Web Speech API Implementation ---
+// --- 3. Web Speech API Implementation (Logic Only) ---
 let webRecognition = null;
 
 function startWebSpeech() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SpeechRecognition) { alert("Web Speech API not supported."); return; }
 
-    // 前回のインスタンスがあれば確実に停止
     if(webRecognition) {
         try { webRecognition.stop(); webRecognition.abort(); } catch(e){}
         webRecognition = null;
@@ -130,8 +129,6 @@ function startWebSpeech() {
 
     webRecognition = new SpeechRecognition();
     webRecognition.lang = 'en-US';
-    // 自動停止を確実にするため、連続認識はOFF
-    webRecognition.continuous = false; 
     webRecognition.interimResults = false; 
     webRecognition.maxAlternatives = 1;
 
@@ -166,21 +163,23 @@ function startWebSpeech() {
 
     webRecognition.onerror = (event) => {
         console.error("Web Speech Error:", event.error);
-        if(event.error === 'no-speech' || event.error === 'aborted') {
-            // 無言や中止は無視する
-        } else {
-            if(typeof handleError === 'function') {
-                handleError({message: "Web Speech Error: " + event.error});
-            }
+        // エラーが出ても、app_flow.js側でstopRecordingInternalが呼ばれるか、
+        // onendが発火してUIが戻るようにする
+        if(event.error !== 'no-speech' && event.error !== 'aborted') {
+             // 致命的なエラーだけ表示
+             document.getElementById('feedback-area').innerText = "Error: " + event.error;
         }
-        if(typeof stopRecordingInternal === 'function') stopRecordingInternal();
     };
 
     webRecognition.onend = () => {
-        // 自然終了時
-        // もしまだ結果が出ていなくて（録音中のまま）止まった場合はUIをリセット
-        if(isRecording && typeof stopRecordingInternal === 'function') {
-            stopRecordingInternal();
+        // 結果が出ずに終わった場合（無言など）、UIをリセットする
+        const btn = document.getElementById('rec-btn');
+        if(btn && (btn.classList.contains('processing') || btn.classList.contains('recording'))) {
+            // Analyzing...またはRecordingのまま終わったらリセット
+            btn.classList.remove('processing');
+            btn.classList.remove('recording');
+            btn.innerText = "🎤 Start";
+            btn.style.display = 'block';
         }
     };
 
@@ -188,7 +187,12 @@ function startWebSpeech() {
         webRecognition.start();
     } catch(e) {
         console.error("Start Failed", e);
-        if(typeof stopRecordingInternal === 'function') stopRecordingInternal();
+        // スタート失敗したら即時リセット
+        const btn = document.getElementById('rec-btn');
+        if(btn) {
+            btn.classList.remove('recording');
+            btn.innerText = "🎤 Start";
+        }
     }
 }
 

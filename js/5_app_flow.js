@@ -4,7 +4,7 @@
 async function toggleRecord() {
     const btn = document.getElementById('rec-btn');
 
-    // ■ 録音停止処理 (ユーザーがボタンを押して止めた場合)
+    // ■ 録音停止処理
     if (isRecording) {
         stopRecordingInternal();
         return;
@@ -21,94 +21,92 @@ async function toggleRecord() {
         btn.classList.add('recording');
         btn.innerText = "Wait..."; 
         
-        // ★ 修正: 状態フラグを【最初】に立てる
-        // これにより、visualize() が呼び出された瞬間に終了するのを防ぐ
+        // 状態フラグを先に立てる
         isRecording = true;
         hasSpoken = false;
         silenceStart = 0;
 
-        // 1. マイクストリーム取得 (波形表示用)
+        // 1. マイクストリーム取得 (全モード必須: 波形と録音のため)
         let stream = null;
         try {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            currentStream = stream; // グローバル保持
+            currentStream = stream; 
         } catch(err) {
-            console.warn("Visualizer mic access failed:", err);
-            // マイクが取れなくてもWeb Speechなら動く可能性があるので続行
+            console.warn("Mic access failed:", err);
+            alert("マイクへのアクセスが拒否されました。");
+            isRecording = false;
+            btn.classList.remove('recording');
+            btn.innerText = "🎤 Start";
+            return;
         }
 
-        // 2. ビジュアライザー起動 (ストリームが取れた場合のみ)
-        if(stream && typeof startAudioVisualization === 'function') {
+        // 2. ビジュアライザー起動
+        if(typeof startAudioVisualization === 'function') {
             startAudioVisualization(stream);
         }
         
-        // 3. プロバイダーごとの開始処理
-        if (currentProvider === 'web') {
-            // ★ Web Speech API
-            btn.innerText = "■ Stop (Web)";
+        // 3. MediaRecorder開始 (全モード必須: 録音後の波形と再生のため)
+        let mime='audio/webm'; 
+        if(MediaRecorder.isTypeSupported('audio/mp4')) mime='audio/mp4';
+        else if(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mime='audio/webm;codecs=opus';
+
+        mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+        audioChunks = [];
+        
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        
+        // 録音停止時の処理（共通）
+        mediaRecorder.onstop = async () => { 
+            // マイク停止
+            if(currentStream) currentStream.getTracks().forEach(t => t.stop()); 
             
-            // 少し待ってから認識開始（マイク競合回避のため）
-            setTimeout(() => {
-                if(isRecording) { 
-                    if(typeof startWebSpeech === 'function') startWebSpeech(); 
-                }
-            }, 100);
+            const blob = new Blob(audioChunks, { type: mime }); 
+            userAudioBlob = blob; 
+            document.getElementById('replay-user-btn').style.display = 'block';
 
-        } else {
-            // ★ Gemini / OpenAI (MediaRecorder)
-            btn.innerText = "■ Stop";
-            
-            // MediaRecorder設定
-            let mime='audio/webm'; 
-            if(MediaRecorder.isTypeSupported('audio/mp4')) mime='audio/mp4';
-            else if(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mime='audio/webm;codecs=opus';
-
-            if(stream) {
-                mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
-                audioChunks = [];
-                
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                
-                mediaRecorder.onstop = async () => { 
-                    // マイク停止
-                    if(currentStream) currentStream.getTracks().forEach(t => t.stop()); 
-                    
-                    const blob = new Blob(audioChunks, { type: mime }); 
-                    userAudioBlob = blob; 
-                    document.getElementById('replay-user-btn').style.display = 'block';
-
-                    // 静的波形生成
-                    if(audioCtx) {
-                        try {
-                            const arrayBuffer = await blob.arrayBuffer();
-                            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                            if(typeof renderStaticResult === 'function') renderStaticResult(audioBuffer); 
-                        } catch(e) { console.error("Audio Decode Error", e); }
-                    }
-
-                    // API送信
-                    if(currentProvider === 'openai') {
-                        if(typeof sendToOpenAI === 'function') sendToOpenAI(blob, mime);
-                    } else {
-                        if(typeof sendToGemini === 'function') sendToGemini(blob, mime); 
-                    }
-                };
-
-                mediaRecorder.start();
-            } else {
-                alert("マイクを利用できませんでした。");
-                stopRecordingInternal();
+            // 静的波形生成 (録音データから)
+            if(audioCtx) {
+                try {
+                    const arrayBuffer = await blob.arrayBuffer();
+                    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                    if(typeof renderStaticResult === 'function') renderStaticResult(audioBuffer); 
+                } catch(e) { console.error("Audio Decode Error", e); }
             }
+
+            // ★ API分岐: Web Speech以外の場合のみ、ここでAPIに送信
+            // (Web Speechの場合は、音声認識側で勝手に判定が進むのでここでは何もしない)
+            if (currentProvider !== 'web') {
+                if(currentProvider === 'openai') {
+                    if(typeof sendToOpenAI === 'function') sendToOpenAI(blob, mime);
+                } else {
+                    if(typeof sendToGemini === 'function') sendToGemini(blob, mime); 
+                }
+            }
+        };
+
+        mediaRecorder.start();
+
+        // 4. Web Speech APIの場合のみ、認識エンジンも同時に回す
+        if (currentProvider === 'web') {
+            btn.innerText = "■ Stop (Web)";
+            // 少し待ってから認識開始（マイク競合回避の念の為）
+            setTimeout(() => {
+                if(isRecording && typeof startWebSpeech === 'function') {
+                    startWebSpeech(); 
+                }
+            }, 50);
+        } else {
+            btn.innerText = "■ Stop";
         }
 
     } catch(e) {
-        alert("Mic/App Error: " + e.message);
+        alert("App Error: " + e.message);
         stopRecordingInternal();
     }
 }
 
 function stopRecordingInternal() {
-    isRecording = false; // フラグを下げる
+    isRecording = false; // 先にフラグを下げる
     
     const btn = document.getElementById('rec-btn');
     if(btn) {
@@ -117,26 +115,28 @@ function stopRecordingInternal() {
         btn.innerText = "Analyzing..."; 
     }
 
-    // Web Speech停止
+    // Web Speech停止 (認識エンジンを止める)
     if(currentProvider === 'web') {
         if(typeof stopWebSpeech === 'function') stopWebSpeech();
+        
+        // Web SpeechはAPI通信待ち時間がないので、即座にUIを戻す
+        // (onresultで正解判定が出る場合もあるが、手動停止時はここでもケア)
+        setTimeout(() => {
+            if(btn && btn.innerText === "Analyzing...") {
+                btn.classList.remove('processing');
+                btn.innerText = "🎤 Start";
+            }
+        }, 500);
     }
     
-    // MediaRecorder停止
+    // MediaRecorder停止 (これが onstop を発火させ、波形生成を行う)
     if(mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
     } else {
-        // MediaRecorderを使っていない場合（Web Speech）、ここで手動でストリームを切る
+        // 万が一Recorderが動いていない場合の保険
         if(currentStream) {
              currentStream.getTracks().forEach(t => t.stop());
              currentStream = null;
-        }
-        
-        // ★ 修正: Web Speechの場合はMediaRecorderのonstopが走らないため
-        // ここでAnalyzing表示のまま放置されるのを防ぐためのタイムアウト処理を入れる
-        // (本来はonendイベントで戻すべきだが、念のため)
-        if(currentProvider === 'web') {
-             // onendが正しく実装されていればそちらで処理されるが、念の為の保険
         }
     }
 }
@@ -170,7 +170,9 @@ function checkPronunciation(aiResult) {
     const cont=document.querySelector('.container');
     
     const btn=document.getElementById('rec-btn');
+    // 結果が出たらボタンをリセット
     btn.classList.remove('processing'); 
+    btn.classList.remove('recording'); 
     btn.innerText="🎤 Start";
     btn.style.display='none'; 
 
@@ -188,7 +190,7 @@ function checkPronunciation(aiResult) {
         const adviceText = aiResult.advice || "Try again!";
         fb.innerHTML=`⚠️ ${inp}<br><small style="font-size:0.8rem; color:var(--text); font-weight:bold;">💡 ${adviceText}</small>`; 
         fb.className="feedback incorrect"; streak=0;
-        btn.style.display='block'; 
+        btn.style.display='block'; // 再挑戦ボタン表示
     }
     updateStreakDisplay();
 }
