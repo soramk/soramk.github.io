@@ -1,13 +1,11 @@
-// --- Globals from other files needed: mediaRecorder, audioCtx, etc. ---
-let mediaRecorder = null, audioChunks = [], audioCtx = null, analyser = null, dataArray = null, canvasCtx = null;
-let userAudioBlob = null;
-let hasSpoken = false, silenceStart = 0; const VAD_THRESHOLD = 15, VAD_SILENCE = 1200;
+// Note: Globals (mediaRecorder, audioCtx, etc.) are defined in 3_core_logic.js.
+// We just use them here.
 
 // --- Recording Flow ---
 async function toggleRecord() {
     // Web Speech APIの場合はAPI Clientの処理へ移譲
     if(currentProvider === 'web') {
-        toggleWebSpeech();
+        if(typeof toggleWebSpeech === 'function') toggleWebSpeech();
         return;
     }
 
@@ -53,22 +51,22 @@ async function toggleRecord() {
             // Visuals (Static Result)
             const arrayBuffer = await blob.arrayBuffer();
             const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            renderStaticResult(audioBuffer); 
+            if(typeof renderStaticResult === 'function') renderStaticResult(audioBuffer); 
 
             // プロバイダー分岐
             if(currentProvider === 'openai') {
-                sendToOpenAI(blob, mime);
+                if(typeof sendToOpenAI === 'function') sendToOpenAI(blob, mime);
             } else {
-                sendToGemini(blob, mime); 
+                if(typeof sendToGemini === 'function') sendToGemini(blob, mime); 
             }
         };
 
         isRecording=true; hasSpoken=false; silenceStart=0;
         btn.classList.add('recording'); btn.innerText="■ Stop";
         
-        resetVisualizerState(); // from 1_audio_visuals.js
-        initCanvas(); 
-        visualize(); // from 1_audio_visuals.js
+        if(typeof resetVisualizerState === 'function') resetVisualizerState();
+        if(typeof initCanvas === 'function') initCanvas(); 
+        if(typeof visualize === 'function') visualize(); 
         mediaRecorder.start();
     }catch(e){alert("Mic Error: "+e.message);}
 }
@@ -77,7 +75,8 @@ function stopRecordingInternal() {
     if(mediaRecorder && isRecording) {
         mediaRecorder.stop();
         isRecording = false;
-        document.getElementById('rec-btn').classList.remove('recording');
+        const btn = document.getElementById('rec-btn');
+        if(btn) btn.classList.remove('recording');
     }
 }
 
