@@ -115,13 +115,14 @@ async function sendToOpenAI(blob, mime) {
     }
 }
 
-// --- 3. Web Speech API Implementation (Logic Only) ---
+// --- 3. Web Speech API Implementation ---
 let webRecognition = null;
 
 function startWebSpeech() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SpeechRecognition) { alert("Web Speech API not supported."); return; }
 
+    // 前回のインスタンスがあれば確実に停止
     if(webRecognition) {
         try { webRecognition.stop(); webRecognition.abort(); } catch(e){}
         webRecognition = null;
@@ -129,6 +130,8 @@ function startWebSpeech() {
 
     webRecognition = new SpeechRecognition();
     webRecognition.lang = 'en-US';
+    // 自動停止を確実にするため、連続認識はOFF
+    webRecognition.continuous = false; 
     webRecognition.interimResults = false; 
     webRecognition.maxAlternatives = 1;
 
@@ -164,48 +167,33 @@ function startWebSpeech() {
     webRecognition.onerror = (event) => {
         console.error("Web Speech Error:", event.error);
         if(event.error === 'no-speech' || event.error === 'aborted') {
-            // 無言や中止は無視するが、UIリセットのために後続へ
+            // 無言や中止は無視する
         } else {
             if(typeof handleError === 'function') {
                 handleError({message: "Web Speech Error: " + event.error});
-                return;
             }
         }
-        // エラー後、ボタンがAnalyzingのままにならないようにする
-        resetWebSpeechUI();
+        if(typeof stopRecordingInternal === 'function') stopRecordingInternal();
     };
 
     webRecognition.onend = () => {
-        // 結果が出ずに終了した場合（無言など）、ボタンをリセットする
-        resetWebSpeechUI();
+        // 自然終了時
+        // もしまだ結果が出ていなくて（録音中のまま）止まった場合はUIをリセット
+        if(isRecording && typeof stopRecordingInternal === 'function') {
+            stopRecordingInternal();
+        }
     };
 
     try {
         webRecognition.start();
     } catch(e) {
         console.error("Start Failed", e);
-        resetWebSpeechUI();
+        if(typeof stopRecordingInternal === 'function') stopRecordingInternal();
     }
 }
 
 function stopWebSpeech() {
     if(webRecognition) {
         try { webRecognition.stop(); } catch(e){}
-    }
-}
-
-// ★ 追加: UIリセット用ヘルパー
-function resetWebSpeechUI() {
-    const btn = document.getElementById('rec-btn');
-    if(btn && btn.classList.contains('processing')) {
-        // まだ処理中（Analyzing...）になっている場合は、強制的にスタートに戻す
-        btn.classList.remove('processing');
-        btn.classList.remove('recording');
-        btn.innerText = "🎤 Start";
-        btn.style.display = 'block';
-    }
-    // isRecordingフラグも下げる
-    if(typeof isRecording !== 'undefined' && isRecording) {
-        isRecording = false;
     }
 }

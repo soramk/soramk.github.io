@@ -90,7 +90,6 @@ function initCanvas(){
     }
 }
 
-// ★ 修正: GC対策のためグローバル変数を活用 + frequencySum初期化を確実に
 function startAudioVisualization(stream) {
     if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -101,7 +100,7 @@ function startAudioVisualization(stream) {
     analyser.smoothingTimeConstant = 0.8;
     dataArray = new Uint8Array(analyser.frequencyBinCount);
     
-    // ★ リセット時にスペクトル合計用配列も作り直す
+    // リセット時にスペクトル合計用配列も作り直す
     frequencySum = new Float32Array(analyser.frequencyBinCount);
     frequencyCount = 0;
 
@@ -119,7 +118,7 @@ function startAudioVisualization(stream) {
 function resetVisualizerState() {
     lastAudioBuffer = null;
     frequencyCount = 0;
-    if(frequencySum) frequencySum.fill(0); // ゼロクリア
+    if(frequencySum) frequencySum.fill(0); 
     
     if(specCanvas) {
         const ctx = specCanvas.getContext('2d');
@@ -165,7 +164,7 @@ function visualize(){
     // 常に周波数データを取得
     analyser.getByteFrequencyData(dataArray);
 
-    // Spectrum用データの蓄積 (安全策追加)
+    // Spectrum用データの蓄積
     if(frequencySum && frequencySum.length === dataArray.length) {
         for(let i=0; i<dataArray.length; i++) frequencySum[i] += dataArray[i];
         frequencyCount++;
@@ -190,7 +189,10 @@ function visualize(){
     if(debugEl) debugEl.innerText=`Vol: ${vol}%`;
 
     const autoStop = document.getElementById('toggle-auto-stop');
-    if(autoStop && autoStop.checked){
+    
+    // ★修正: Web Speech API ('web') の場合は、アプリ側のAuto Stopを強制的に無効化する
+    // ブラウザ自身の発話終了検知機能と競合させないため
+    if(autoStop && autoStop.checked && currentProvider !== 'web'){
         if(vol > VAD_THRESHOLD){ hasSpoken=true; silenceStart=Date.now(); }
         else if(hasSpoken && Date.now()-silenceStart > VAD_SILENCE){ 
             if(typeof toggleRecord === 'function') toggleRecord(); 
