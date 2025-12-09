@@ -2,19 +2,12 @@
 
 // --- Recording Flow ---
 async function toggleRecord() {
-    // Web Speech APIの場合はAPI Clientの処理へ移譲
-    if(currentProvider === 'web') {
-        if(typeof toggleWebSpeech === 'function') toggleWebSpeech();
-        return;
-    }
-
     const btn = document.getElementById('rec-btn');
 
-    // 録音停止
-    if(isRecording){ 
+    // ■ 録音停止処理
+    if (isRecording) {
         stopRecordingInternal();
-        btn.classList.remove('recording'); btn.classList.add('processing'); btn.innerText="Analyzing..."; 
-        return; 
+        return;
     }
 
     // キーチェック
@@ -23,67 +16,116 @@ async function toggleRecord() {
     if(currentProvider === 'gemini' && !kGemini) { openSettings(); return; }
     if(currentProvider === 'openai' && !kOpenAI) { openSettings(); return; }
 
-    try{
-        sfx.start();
+    try {
+        // UI初期化
+        btn.classList.add('recording');
+        btn.innerText = "Wait..."; // 初期化中表示
         
-        // マイクストリーム取得
-        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-        currentStream = stream;
+        // 1. マイクストリーム取得 (波形表示用)
+        // Web Speech APIと併用する場合、ここでエラーが出ることがあるのでtry-catch
+        let stream;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            currentStream = stream; // グローバル保持
+        } catch(err) {
+            console.warn("Visualizer mic access failed:", err);
+            // 波形が出なくても音声認識は動く可能性があるので続行、ただし波形は出ない
+        }
 
-        // ★ ビジュアライザー起動 (共通処理)
-        startAudioVisualization(stream); 
+        // 2. ビジュアライザー起動 (ストリームが取れた場合のみ)
+        if(stream && typeof startAudioVisualization === 'function') {
+            startAudioVisualization(stream);
+        }
 
-        // MediaRecorder設定
-        let mime='audio/webm'; 
-        if(MediaRecorder.isTypeSupported('audio/mp4')) mime='audio/mp4';
-        else if(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mime='audio/webm;codecs=opus';
-
-        mediaRecorder = new MediaRecorder(stream, {mimeType:mime}); 
-        audioChunks = [];
-        
-        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-        
-        mediaRecorder.onstop = async () => { 
-            // マイク停止
-            stream.getTracks().forEach(t => t.stop()); 
-            
-            const blob = new Blob(audioChunks, {type:mime}); 
-            userAudioBlob = blob; 
-            document.getElementById('replay-user-btn').style.display = 'block';
-
-            // 静的結果の描画
-            const arrayBuffer = await blob.arrayBuffer();
-            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            if(typeof renderStaticResult === 'function') renderStaticResult(audioBuffer); 
-
-            // プロバイダー分岐
-            if(currentProvider === 'openai') {
-                if(typeof sendToOpenAI === 'function') sendToOpenAI(blob, mime);
-            } else {
-                if(typeof sendToGemini === 'function') sendToGemini(blob, mime); 
-            }
-        };
-
-        isRecording = true; 
-        hasSpoken = false; 
+        // UI状態更新
+        isRecording = true;
+        hasSpoken = false;
         silenceStart = 0;
-        btn.classList.add('recording'); 
-        btn.innerText = "■ Stop";
         
-        mediaRecorder.start();
+        // 3. プロバイダーごとの開始処理
+        if (currentProvider === 'web') {
+            // ★ Web Speech API
+            btn.innerText = "■ Stop (Web)";
+            
+            // 少し待ってから認識開始（マイク競合回避のため）
+            setTimeout(() => {
+                if(isRecording) { // 待ってる間に停止されてなければ開始
+                    if(typeof startWebSpeech === 'function') startWebSpeech(); 
+                }
+            }, 100);
+
+        } else {
+            // ★ Gemini / OpenAI (MediaRecorder)
+            btn.innerText = "■ Stop";
+            
+            // MediaRecorder設定
+            let mime='audio/webm'; 
+            if(MediaRecorder.isTypeSupported('audio/mp4')) mime='audio/mp4';
+            else if(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mime='audio/webm;codecs=opus';
+
+            if(stream) {
+                mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                
+                mediaRecorder.onstop = async () => { 
+                    // マイク停止
+                    if(currentStream) currentStream.getTracks().forEach(t => t.stop()); 
+                    
+                    const blob = new Blob(audioChunks, { type: mime }); 
+                    userAudioBlob = blob; 
+                    document.getElementById('replay-user-btn').style.display = 'block';
+
+                    // 静的波形生成
+                    const arrayBuffer = await blob.arrayBuffer();
+                    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                    if(typeof renderStaticResult === 'function') renderStaticResult(audioBuffer); 
+
+                    // API送信
+                    if(currentProvider === 'openai') {
+                        if(typeof sendToOpenAI === 'function') sendToOpenAI(blob, mime);
+                    } else {
+                        if(typeof sendToGemini === 'function') sendToGemini(blob, mime); 
+                    }
+                };
+
+                mediaRecorder.start();
+            } else {
+                alert("マイクを利用できませんでした。");
+                stopRecordingInternal();
+            }
+        }
 
     } catch(e) {
-        alert("Mic Error: "+e.message);
-        isRecording = false;
+        alert("Mic/App Error: " + e.message);
+        stopRecordingInternal();
     }
 }
 
 function stopRecordingInternal() {
-    if(mediaRecorder && isRecording) {
+    isRecording = false;
+    const btn = document.getElementById('rec-btn');
+    if(btn) {
+        btn.classList.remove('recording');
+        btn.classList.add('processing');
+        btn.innerText = "Analyzing..."; // 結果待ち
+    }
+
+    // Web Speech停止
+    if(currentProvider === 'web') {
+        if(typeof stopWebSpeech === 'function') stopWebSpeech();
+    }
+    
+    // MediaRecorder停止
+    if(mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
-        isRecording = false;
-        const btn = document.getElementById('rec-btn');
-        if(btn) btn.classList.remove('recording');
+    } else {
+        // MediaRecorderを使っていない場合（Web Speech）、ここで手動でストリームを切る
+        if(currentStream) {
+             currentStream.getTracks().forEach(t => t.stop());
+             currentStream = null;
+        }
     }
 }
 
@@ -96,9 +138,14 @@ function skipQuestion() {
 
 function handleError(e) {
     console.error(e);
-    document.getElementById('feedback-area').innerText="Error: "+e.message;
-    document.getElementById('rec-btn').classList.remove('processing');
-    document.getElementById('rec-btn').innerText="🎤 Start";
+    const msg = e.message || e;
+    document.getElementById('feedback-area').innerText="Error: "+ msg;
+    const btn = document.getElementById('rec-btn');
+    if(btn) {
+        btn.classList.remove('processing');
+        btn.classList.remove('recording');
+        btn.innerText="🎤 Start";
+    }
 }
 
 function checkPronunciation(aiResult) {
@@ -125,7 +172,7 @@ function checkPronunciation(aiResult) {
         if(auto) setTimeout(()=>nextQuestion(true),1500); else document.getElementById('next-btn-spk').style.display='block';
     }else{
         sfx.wrong(); cont.classList.add('shake-anim');
-        const adviceText = aiResult.advice || "もう一度トライ！";
+        const adviceText = aiResult.advice || "Try again!";
         fb.innerHTML=`⚠️ ${inp}<br><small style="font-size:0.8rem; color:var(--text); font-weight:bold;">💡 ${adviceText}</small>`; 
         fb.className="feedback incorrect"; streak=0;
         btn.style.display='block'; 

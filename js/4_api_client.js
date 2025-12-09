@@ -48,8 +48,11 @@ async function sendToGemini(blob, mime) {
         
         let rawText = d.candidates[0].content.parts[0].text;
         const result = JSON.parse(rawText);
-        checkPronunciation(result); 
-    }catch(e){ handleError(e); }
+        if(typeof checkPronunciation === 'function') checkPronunciation(result); 
+    }catch(e){ 
+        if(typeof handleError === 'function') handleError(e); 
+        else alert(e.message);
+    }
 }
 
 // --- 2. OpenAI Implementation ---
@@ -76,7 +79,7 @@ async function sendToOpenAI(blob, mime) {
         
         const target = targetObj.w.toLowerCase();
         if(heardWord.includes(target)) {
-            checkPronunciation({ heard: heardWord, correct: true, advice: "" });
+            if(typeof checkPronunciation === 'function') checkPronunciation({ heard: heardWord, correct: true, advice: "" });
             return;
         }
 
@@ -104,9 +107,12 @@ async function sendToOpenAI(blob, mime) {
         const chatData = await chatRes.json();
         const advice = chatData.choices[0].message.content;
 
-        checkPronunciation({ heard: heardWord, correct: false, advice: advice });
+        if(typeof checkPronunciation === 'function') checkPronunciation({ heard: heardWord, correct: false, advice: advice });
 
-    } catch(e) { handleError(e); }
+    } catch(e) { 
+        if(typeof handleError === 'function') handleError(e);
+        else alert(e.message);
+    }
 }
 
 // --- 3. Web Speech API Implementation (Logic Only) ---
@@ -116,14 +122,19 @@ function startWebSpeech() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SpeechRecognition) { alert("Web Speech API not supported."); return; }
 
+    // すでに動いていたら止める
+    if(webRecognition) {
+        try { webRecognition.stop(); } catch(e){}
+    }
+
     webRecognition = new SpeechRecognition();
     webRecognition.lang = 'en-US';
-    webRecognition.interimResults = false;
+    webRecognition.interimResults = false; // 確定結果のみ
     webRecognition.maxAlternatives = 1;
 
     webRecognition.onstart = () => {
         document.getElementById('feedback-area').innerText = "Listening (Browser)...";
-        sfx.start();
+        if(sfx && sfx.start) sfx.start();
     };
 
     webRecognition.onresult = (event) => {
@@ -134,38 +145,52 @@ function startWebSpeech() {
         let isOk = false;
         let advice = "";
 
+        // 判定ロジック
         if(heard.split(/[\s\.\?!]+/).includes(target)) {
             isOk = true;
         } else {
             isOk = false;
             if(heard.includes(distractor)) {
-                advice = `"${distractor}" に聞こえました。LとRの違いに注意して！`;
+                advice = `"${distractor}" に聞こえました。`;
             } else {
-                advice = `AIには "${heard}" と聞こえました。`;
+                advice = `"${heard}" と聞こえました。`;
             }
         }
         
-        checkPronunciation({ heard: heard, correct: isOk, advice: advice });
-        
-        // Web Speechの終了通知（UI側へ）
-        if(typeof stopRecordingInternal === 'function') stopRecordingInternal();
+        if(typeof checkPronunciation === 'function') {
+            checkPronunciation({ heard: heard, correct: isOk, advice: advice });
+        }
     };
 
     webRecognition.onerror = (event) => {
-        alert("Web Speech Error: " + event.error);
+        console.error("Web Speech Error:", event.error);
+        if(event.error === 'no-speech') return; // 無視
+        
+        if(typeof handleError === 'function') {
+            handleError({message: "Web Speech Error: " + event.error});
+        }
+        
+        // エラー時は強制停止
         if(typeof stopRecordingInternal === 'function') stopRecordingInternal();
     };
 
     webRecognition.onend = () => {
-        // 自然に終了した場合もUIを停止状態に戻す
-        if(isRecording && typeof stopRecordingInternal === 'function') {
-            stopRecordingInternal();
-        }
+        // 自然終了した場合の処理
+        // app_flow.js側で isRecording がまだ true なら、UIをリセットする
+        // ただし、checkPronunciationが呼ばれた後はすでに停止処理が走っているので何もしない
     };
 
-    webRecognition.start();
+    try {
+        webRecognition.start();
+    } catch(e) {
+        console.error("Failed to start recognition", e);
+        alert("音声認識を開始できませんでした。リロードして再試行してください。");
+        if(typeof stopRecordingInternal === 'function') stopRecordingInternal();
+    }
 }
 
 function stopWebSpeech() {
-    if(webRecognition) webRecognition.stop();
+    if(webRecognition) {
+        try { webRecognition.stop(); } catch(e){}
+    }
 }
