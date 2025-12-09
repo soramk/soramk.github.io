@@ -1,7 +1,6 @@
 // --- Global State Definitions (The Single Source of Truth) ---
 
 // 1. App State
-// varを使うことで、再宣言エラーを防ぎつつグローバル化します
 var db = {};
 var currentCategory = 'basic';
 var currentMode = 'speaking';
@@ -23,33 +22,26 @@ var audioCtx = null;
 var analyser = null;
 var dataArray = null;
 var canvasCtx = null;
+var currentStream = null; // ★追加: マイク入力ストリーム管理用
 
 // 3. Constants
 const VAD_THRESHOLD = 15;
 const VAD_SILENCE = 1200;
 
 // 4. Visualizer State
-var visMode = 'wave'; // 'wave', 'spectrogram', 'frequency'
+var visMode = 'wave'; 
 
 // --- Init Logic ---
 window.onload = async () => {
-    // UI構築
     if(typeof injectUI === 'function') injectUI();
 
-    // DB読み込み (2_db_manager.jsの関数)
-    if(typeof loadDb === 'function') {
-        await loadDb();
-    } else {
-        console.error("loadDb function not found!");
-    }
+    if(typeof loadDb === 'function') await loadDb();
     
-    // Canvas初期化 (1_audio_visuals.jsの関数)
     if(typeof initCanvas === 'function') {
         initCanvas();
         window.addEventListener('resize', initCanvas);
     }
     
-    // 設定読み込み
     const p = localStorage.getItem('lr_provider');
     if(p) currentProvider = p;
     
@@ -57,7 +49,6 @@ window.onload = async () => {
     const kOpenAI = localStorage.getItem('openai_key');
     const rate = localStorage.getItem('lr_rate');
 
-    // UI初期反映
     const elKeyG = document.getElementById('api-key-gemini');
     const elKeyO = document.getElementById('api-key-openai');
     const elProv = document.getElementById('ai-provider');
@@ -70,7 +61,6 @@ window.onload = async () => {
     }
     if(rate) speechRate = parseFloat(rate);
     
-    // Geminiモデル取得
     if(currentProvider === 'gemini' && kGemini && typeof fetchModels === 'function') fetchModels(true);
     
     if(typeof populateCategorySelect === 'function') populateCategorySelect(); 
@@ -112,7 +102,6 @@ function saveSettings() {
     localStorage.setItem('lr_rate', speechRate);
     
     closeSettings();
-    // 設定変更を反映するためにモデル再取得などの処理があればここに追加
     if(currentProvider === 'gemini' && kGemini && typeof fetchModels === 'function') fetchModels(true);
 }
 
@@ -155,7 +144,6 @@ function nextQuestion(autoStart=false) {
     if(container) container.classList.remove('shake-anim','pop-anim');
     document.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('success'));
 
-    // SRS Filter
     const now = Date.now();
     const dueItems = list.filter(item => !item.nextReview || item.nextReview <= now);
     
@@ -200,7 +188,6 @@ function updateWordStats(isCorrect) {
     if(typeof saveDb === 'function') saveDb();
 }
 
-// Utils
 function updateStreakDisplay(){ 
     const el = document.getElementById('streak-disp');
     if(el) el.innerText=streak; 

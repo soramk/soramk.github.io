@@ -55,29 +55,25 @@ const visemes = {
 };
 
 // --- Visualizer State ---
-// visMode is defined in main.js (global)
-let specCanvas = null; // スペクトログラム履歴用 (Offscreen)
-let lastAudioBuffer = null; // 録音済み波形データ
-let frequencySum = null; // 平均スペクトル計算用
+let specCanvas = null; 
+let lastAudioBuffer = null; 
+let frequencySum = null; 
 let frequencyCount = 0;
 
-// 解説テキスト
 const explTexts = {
     wave: "【波形 (Wave)】<br>声の「大きさ」の時間変化です。R/Lの違いは形にはあまり出ませんが、リズムや強弱が分かります。",
     spectrogram: "【声紋 (Spectrogram)】<br>声の成分分析です。下から3本目の線(F3)に注目。<br><b>R:</b> F3がグッと下がります。<br><b>L:</b> F3は高いまま維持されます。",
     frequency: "【周波数分布 (Spectrum)】<br>声の「高さ」の成分平均です。左が低い音、右が高い音。<br>Rの方が低い成分(左側)が強く出やすい傾向があります。"
 };
 
-// キャンバス初期化
 function initCanvas(){ 
     const c=document.getElementById("visualizer");
-    if(!c) return; // UIがまだ生成されていない場合はスキップ
+    if(!c) return; 
     
     const b=document.querySelector(".visualizer-box"), d=window.devicePixelRatio||1; 
     c.width=b.clientWidth*d; c.height=b.clientHeight*d; 
     canvasCtx=c.getContext("2d"); canvasCtx.scale(d,d); 
     
-    // スペクトログラム用オフスクリーンキャンバス
     if(!specCanvas) {
         specCanvas = document.createElement('canvas');
         specCanvas.width = 1000; specCanvas.height = 256; 
@@ -85,7 +81,6 @@ function initCanvas(){
     
     updateVisExplanation();
 
-    // 録音中でない場合、保持しているデータがあれば再描画
     if(!isRecording && lastAudioBuffer) {
         renderStaticResult(lastAudioBuffer);
     } else if (!isRecording) {
@@ -95,7 +90,26 @@ function initCanvas(){
     }
 }
 
-// 録音開始時のリセット
+// ★ 新規追加: どのプロバイダーでも共通して呼び出せる可視化開始関数
+function startAudioVisualization(stream) {
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    
+    if(analyser) analyser.disconnect();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.8;
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+    
+    // マイクストリームをAnalyserに接続
+    const src = audioCtx.createMediaStreamSource(stream);
+    src.connect(analyser);
+    
+    resetVisualizerState();
+    initCanvas();
+    visualize(); // ループ開始
+}
+
 function resetVisualizerState() {
     lastAudioBuffer = null;
     if(analyser) {
@@ -103,12 +117,10 @@ function resetVisualizerState() {
     }
     frequencyCount = 0;
     
-    // スペクトログラムをクリア
     if(specCanvas) {
         const ctx = specCanvas.getContext('2d');
         ctx.clearRect(0, 0, specCanvas.width, specCanvas.height);
     }
-    // メインキャンバスをクリア
     const c=document.getElementById("visualizer");
     if(c) {
         const ctx=c.getContext("2d");
@@ -116,9 +128,7 @@ function resetVisualizerState() {
     }
 }
 
-// 表示モード切り替え
 function toggleVisMode() {
-    // Cycle: Wave -> Spectrogram -> Frequency
     if (visMode === 'wave') visMode = 'spectrogram';
     else if (visMode === 'spectrogram') visMode = 'frequency';
     else visMode = 'wave';
@@ -131,8 +141,6 @@ function toggleVisMode() {
     }
     
     updateVisExplanation();
-
-    // 静的表示モード（録音後）なら再描画
     if(!isRecording && lastAudioBuffer) renderStaticResult(lastAudioBuffer);
 }
 
@@ -141,31 +149,21 @@ function updateVisExplanation() {
     if(el) el.innerHTML = explTexts[visMode];
 }
 
-// ★ リアルタイム描画 & データ蓄積 ★
 function visualize(){
     if(!isRecording) return;
     requestAnimationFrame(visualize);
     
     const ctx=canvasCtx, w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
     
-    // 1. 周波数データを取得 (VAD, Spectrogram, Frequency用)
     analyser.getByteFrequencyData(dataArray);
 
-    // ★ データ蓄積: 平均周波数スペクトルのために加算 (表示モードに関わらず実行)
-    if(frequencySum) {
-        // frequencySumが初期化されていない場合のガード
-        if (frequencySum.length !== dataArray.length) {
-            frequencySum = new Uint32Array(dataArray.length);
-        }
+    if(frequencySum && frequencySum.length === dataArray.length) {
         for(let i=0; i<dataArray.length; i++) frequencySum[i] += dataArray[i];
         frequencyCount++;
     }
 
-    // ★ データ蓄積: スペクトログラムの更新 (表示モードに関わらず実行)
-    // これにより、WAVEモードで録音していても裏でスペクトログラムが作られる
     const specCtx = specCanvas.getContext('2d');
-    specCtx.drawImage(specCanvas, -1, 0); // 全体を左にシフト
-    // 右端に新しいラインを描画
+    specCtx.drawImage(specCanvas, -1, 0); 
     for(let i=0; i<dataArray.length; i++){
         const val = dataArray[i];
         const y = specCanvas.height - (i / dataArray.length) * specCanvas.height;
@@ -174,7 +172,6 @@ function visualize(){
         specCtx.fillRect(specCanvas.width-1, y, 1, 2);
     }
 
-    // 2. VAD (音量検知)
     let sum = 0;
     for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
     const vol = Math.floor((sum/dataArray.length)*2); 
@@ -185,21 +182,20 @@ function visualize(){
     if(autoStop && autoStop.checked){
         if(vol > VAD_THRESHOLD){ hasSpoken=true; silenceStart=Date.now(); }
         else if(hasSpoken && Date.now()-silenceStart > VAD_SILENCE){ 
-            toggleRecord(); 
+            // 循環参照を防ぐため、ここでの自動停止はUI側のtoggleRecordを呼ぶのではなく
+            // カスタムイベントか、グローバル関数経由が望ましいが、
+            // 簡易的に toggleRecord がグローバルにある前提で呼ぶ
+            if(typeof toggleRecord === 'function') toggleRecord(); 
             hasSpoken=false; 
             return; 
         }
     }
 
-    // 3. 画面描画 (現在のモードに合わせて)
     ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
 
     if(visMode === 'spectrogram') {
-        // 裏で作っている specCanvas をそのまま表示
         ctx.drawImage(specCanvas, 0, 0, specCanvas.width, specCanvas.height, 0, 0, w, h);
-
     } else if (visMode === 'frequency') {
-        // リアルタイム周波数バー
         const barW = (w / dataArray.length) * 2.5; let x=0;
         for(let i=0; i<dataArray.length; i++) {
             const barH = (dataArray[i] / 255) * h;
@@ -207,10 +203,8 @@ function visualize(){
             ctx.fillRect(x, h-barH, barW, barH);
             x += barW + 1;
         }
-
     } else {
-        // Waveform
-        analyser.getByteTimeDomainData(dataArray); // 波形用にデータを再取得
+        analyser.getByteTimeDomainData(dataArray); 
         ctx.lineWidth=2; ctx.strokeStyle='#0ea5e9'; ctx.beginPath();
         const slice=w*1.0/dataArray.length; let x=0;
         for(let i=0;i<dataArray.length;i++){
@@ -221,35 +215,26 @@ function visualize(){
     }
 }
 
-// 録音完了後の静的描画 (Result)
 function renderStaticResult(buffer) {
     lastAudioBuffer = buffer; 
     const ctx = canvasCtx;
     const w = ctx.canvas.width / (window.devicePixelRatio||1);
     const h = ctx.canvas.height / (window.devicePixelRatio||1);
     
-    // クリア
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
 
     if(visMode === 'spectrogram') {
-        // ★ スペクトログラム: 録音中に裏で作った画像を表示
         ctx.drawImage(specCanvas, 0, 0, specCanvas.width, specCanvas.height, 0, 0, w, h);
-        
-        // ガイド線 (F3付近の目安)
         ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(0, h*0.6); ctx.lineTo(w, h*0.6); ctx.stroke();
         ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillText("F3 Region (Approx)", 10, h*0.6 - 5);
-
     } else if (visMode === 'frequency') {
-        // ★ 平均周波数スペクトル: 蓄積したデータから平均を計算して表示
         if(frequencySum && frequencyCount > 0) {
             const barW = (w / frequencySum.length) * 2.5; let x=0;
             for(let i=0; i<frequencySum.length; i++) {
                 const avgVal = frequencySum[i] / frequencyCount;
                 const barH = (avgVal / 255) * h;
-                
-                // 色: 低音(青) -> 高音(紫)
                 ctx.fillStyle = `rgb(${barH+50}, 100, 255)`;
                 ctx.fillRect(x, h-barH, barW, barH);
                 x += barW + 1;
@@ -259,13 +244,11 @@ function renderStaticResult(buffer) {
         } else {
             ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillText("No frequency data captured", 10, 20);
         }
-
     } else {
-        // ★ Waveform: バッファから描画
         const data = buffer.getChannelData(0);
         const step = Math.ceil(data.length / w);
         const amp = h / 2;
-        ctx.fillStyle = '#0ea5e9'; // Blue
+        ctx.fillStyle = '#0ea5e9'; 
         ctx.beginPath();
         for (let i = 0; i < w; i++) {
             let min = 1.0; let max = -1.0;

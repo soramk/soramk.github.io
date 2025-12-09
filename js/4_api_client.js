@@ -48,11 +48,11 @@ async function sendToGemini(blob, mime) {
         
         let rawText = d.candidates[0].content.parts[0].text;
         const result = JSON.parse(rawText);
-        checkPronunciation(result); // Defined in app_flow.js
+        checkPronunciation(result); 
     }catch(e){ handleError(e); }
 }
 
-// --- 2. OpenAI Implementation (Whisper + GPT-4o-mini) ---
+// --- 2. OpenAI Implementation ---
 async function sendToOpenAI(blob, mime) {
     const k = document.getElementById('api-key-openai').value;
     if(!k) { alert("OpenAI Key missing"); return; }
@@ -109,17 +109,10 @@ async function sendToOpenAI(blob, mime) {
     } catch(e) { handleError(e); }
 }
 
-// --- 3. Web Speech API Implementation ---
+// --- 3. Web Speech API Implementation (Logic Only) ---
 let webRecognition = null;
-function toggleWebSpeech() {
-    const btn = document.getElementById('rec-btn');
-    if(isRecording) {
-        if(webRecognition) webRecognition.stop();
-        isRecording = false;
-        btn.classList.remove('recording'); btn.innerText="🎤 Start";
-        return;
-    }
 
+function startWebSpeech() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SpeechRecognition) { alert("Web Speech API not supported."); return; }
 
@@ -129,8 +122,6 @@ function toggleWebSpeech() {
     webRecognition.maxAlternatives = 1;
 
     webRecognition.onstart = () => {
-        isRecording = true;
-        btn.classList.add('recording'); btn.innerText="■ Stop (Web)";
         document.getElementById('feedback-area').innerText = "Listening (Browser)...";
         sfx.start();
     };
@@ -155,22 +146,26 @@ function toggleWebSpeech() {
         }
         
         checkPronunciation({ heard: heard, correct: isOk, advice: advice });
-        isRecording = false;
-        btn.classList.remove('recording'); btn.innerText="🎤 Start";
+        
+        // Web Speechの終了通知（UI側へ）
+        if(typeof stopRecordingInternal === 'function') stopRecordingInternal();
     };
 
     webRecognition.onerror = (event) => {
         alert("Web Speech Error: " + event.error);
-        isRecording = false;
-        btn.classList.remove('recording'); btn.innerText="🎤 Start";
+        if(typeof stopRecordingInternal === 'function') stopRecordingInternal();
     };
 
     webRecognition.onend = () => {
-        if(isRecording) { 
-            isRecording = false;
-            btn.classList.remove('recording'); btn.innerText="🎤 Start";
+        // 自然に終了した場合もUIを停止状態に戻す
+        if(isRecording && typeof stopRecordingInternal === 'function') {
+            stopRecordingInternal();
         }
     };
 
     webRecognition.start();
+}
+
+function stopWebSpeech() {
+    if(webRecognition) webRecognition.stop();
 }
