@@ -82,7 +82,7 @@ const HTML_TEMPLATES = {
     startOverlay: `
     <div id="start-overlay">
         <div style="font-size:3rem; margin-bottom:20px;">🎧</div>
-        <h2>L/R Master v28</h2>
+        <h2>L/R Master</h2>
         <p>Tap to Unlock Audio</p>
         <button class="start-btn" onclick="unlockAudio()">START</button>
     </div>
