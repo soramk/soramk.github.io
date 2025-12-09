@@ -1,46 +1,39 @@
-// --- Settings Logic ---
-function openSettings() { document.getElementById('settings-modal').style.display='flex'; document.getElementById('speech-rate').value = speechRate; document.getElementById('rate-val').innerText = speechRate; }
-function closeSettings() { document.getElementById('settings-modal').style.display='none'; }
-function saveSettings() { 
-    const k=document.getElementById('api-key').value; 
-    if(k) localStorage.setItem('gemini_key',k);
-    speechRate = parseFloat(document.getElementById('speech-rate').value);
-    localStorage.setItem('lr_rate', speechRate);
-    closeSettings(); 
-}
-async function fetchModels(silent=false) {
-    const k=document.getElementById('api-key').value;
-    const sel = document.getElementById('model-select');
-    try {
-        const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${k}`);
-        const d=await r.json();
-        sel.innerHTML='';
-        d.models.filter(m=>m.supportedGenerationMethods?.includes("generateContent")&&(m.name.includes("flash")||m.name.includes("pro"))).forEach(m=>{
-            const o=document.createElement('option'); o.value=m.name.replace('models/',''); o.text=m.displayName; sel.appendChild(o);
-        });
-        sel.disabled=false;
-    } catch(e) { if(!silent) alert(e.message); }
-}
-
 // --- Data Loading Logic ---
+// 注: db変数は 3_core_logic.js で定義されたグローバル変数を使用します
+
 async function loadDb() {
     const s = localStorage.getItem('lr_v24_db');
     if (s) {
         try {
-            db = JSON.parse(s);
+            // グローバルのdb変数に代入
+            const loaded = JSON.parse(s);
+            // 既存のオブジェクトを維持しつつ中身を更新
+            Object.assign(db, loaded);
             console.log("Loaded DB from LocalStorage");
             return;
         } catch (e) { console.error("LS load failed", e); }
     }
     console.log("Loading default datasets...");
-    db = {};
+    
+    // グローバルのdbを初期化
     if (typeof window.dataset_basic !== 'undefined') db['basic'] = window.dataset_basic; else db['basic'] = [];
     if (typeof window.dataset_intermediate !== 'undefined') db['intermediate'] = window.dataset_intermediate; else db['intermediate'] = [];
     if (typeof window.dataset_advanced !== 'undefined') db['advanced'] = window.dataset_advanced; else db['advanced'] = [];
     if (typeof window.dataset_business !== 'undefined') db['business'] = window.dataset_business; else db['business'] = [];
 }
 
-function populateCategorySelect() { const s=document.getElementById('category-select'); s.innerHTML=''; Object.keys(db).forEach(k=>{const o=document.createElement('option');o.value=k;o.text=`${k} (${db[k].length})`;s.appendChild(o);}); if(db[currentCategory])s.value=currentCategory; }
+function populateCategorySelect() { 
+    const s=document.getElementById('category-select'); 
+    if(!s) return;
+    s.innerHTML=''; 
+    Object.keys(db).forEach(k=>{
+        const o=document.createElement('option');
+        o.value=k;
+        o.text=`${k} (${db[k].length})`;
+        s.appendChild(o);
+    }); 
+    if(db[currentCategory]) s.value=currentCategory; 
+}
 
 // --- DB MANAGER LOGIC ---
 function openDbManager() {
@@ -52,13 +45,17 @@ function openDbManager() {
     document.getElementById('level-actions').style.display = 'none';
     document.getElementById('word-actions').style.display = 'none';
 }
+
 function closeDbManager() { 
     document.getElementById('db-manager-modal').style.display = 'none'; 
     populateCategorySelect(); 
-    changeCategory(); 
+    if(typeof changeCategory === 'function') changeCategory(); 
 }
+
 function renderDbList() {
-    const l = document.getElementById('db-level-list'); l.innerHTML = '';
+    const l = document.getElementById('db-level-list'); 
+    if(!l) return;
+    l.innerHTML = '';
     Object.keys(db).forEach(k => {
         const li = document.createElement('li'); li.className = 'db-item'; li.style.cursor = 'pointer';
         if (k === selectedLevel) li.style.background = 'rgba(128,128,128,0.1)';
@@ -66,6 +63,7 @@ function renderDbList() {
         li.onclick = () => selectLevel(k); l.appendChild(li);
     });
 }
+
 function selectLevel(k) {
     selectedLevel = k; renderDbList();
     document.getElementById('current-level-title').innerText = k;
@@ -73,6 +71,7 @@ function selectLevel(k) {
     document.getElementById('word-actions').style.display = 'block';
     renderWordTable();
 }
+
 function renderWordTable() {
     const container = document.getElementById('word-table-container');
     const list = db[selectedLevel];
@@ -92,14 +91,17 @@ function renderWordTable() {
     });
     html += '</table>'; container.innerHTML = html;
 }
+
 function addNewLevel() {
     const n = prompt("New Level Name (e.g., 'Travel'):");
     if (n && !db[n]) { db[n] = []; saveDb(); renderDbList(); selectLevel(n); } else if(db[n]) { alert("Level already exists!"); }
 }
+
 function deleteLevel() {
     if (!selectedLevel) return;
     if (confirm(`Delete level "${selectedLevel}" and all its words?`)) { delete db[selectedLevel]; selectedLevel = null; saveDb(); openDbManager(); }
 }
+
 function addWordPair() {
     if (!selectedLevel) return;
     const lWord = prompt("Enter 'L' word (e.g., Light):"); if (!lWord) return;
@@ -107,17 +109,21 @@ function addWordPair() {
     db[selectedLevel].push({ l: { w: lWord, b: [] }, r: { w: rWord, b: [] } });
     saveDb(); renderWordTable();
 }
+
 function deletePair(idx) {
     if (!selectedLevel) return;
     if (confirm("Delete this pair?")) { db[selectedLevel].splice(idx, 1); saveDb(); renderWordTable(); }
 }
+
 function exportLevel() {
     if (!selectedLevel) return;
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db[selectedLevel], null, 2));
     const a = document.createElement('a'); a.setAttribute("href", dataStr); a.setAttribute("download", `LR_Master_${selectedLevel}.json`);
     document.body.appendChild(a); a.click(); a.remove();
 }
+
 function triggerImport() { document.getElementById('import-file').click(); }
+
 function importLevel(input) {
     if (!selectedLevel) return;
     const file = input.files[0]; if (!file) return;
@@ -133,7 +139,9 @@ function importLevel(input) {
     };
     reader.readAsText(file);
 }
+
 function saveDb() { localStorage.setItem('lr_v24_db', JSON.stringify(db)); }
+
 async function resetDb(){
     if(confirm("Reset all data to defaults?")) { localStorage.removeItem('lr_v24_db'); await loadDb(); openDbManager(); }
 }

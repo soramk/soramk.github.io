@@ -1,44 +1,49 @@
 // --- Global State Definitions (The Single Source of Truth) ---
 
 // 1. App State
-let db = {};
-let currentCategory = 'basic';
-let currentMode = 'speaking';
-let currentPair = {};
-let targetObj = {};
-let isLTarget = false;
-let streak = 0;
-let speechRate = 0.8;
-let currentProvider = 'gemini'; // 'gemini', 'openai', 'web'
+// varを使うことで、再宣言エラーを防ぎつつグローバル化します
+var db = {};
+var currentCategory = 'basic';
+var currentMode = 'speaking';
+var currentPair = {};
+var targetObj = {};
+var isLTarget = false;
+var streak = 0;
+var speechRate = 0.8;
+var currentProvider = 'gemini'; // 'gemini', 'openai', 'web'
 
 // 2. Audio & Recording State
-let isRecording = false;
-let hasSpoken = false;
-let silenceStart = 0;
-let mediaRecorder = null;
-let audioChunks = [];
-let userAudioBlob = null;
-let audioCtx = null;
-let analyser = null;
-let dataArray = null;
-let canvasCtx = null;
+var isRecording = false;
+var hasSpoken = false;
+var silenceStart = 0;
+var mediaRecorder = null;
+var audioChunks = [];
+var userAudioBlob = null;
+var audioCtx = null;
+var analyser = null;
+var dataArray = null;
+var canvasCtx = null;
 
 // 3. Constants
 const VAD_THRESHOLD = 15;
 const VAD_SILENCE = 1200;
 
 // 4. Visualizer State
-let visMode = 'wave'; // 'wave', 'spectrogram', 'frequency'
+var visMode = 'wave'; // 'wave', 'spectrogram', 'frequency'
 
 // --- Init Logic ---
 window.onload = async () => {
     // UI構築
     if(typeof injectUI === 'function') injectUI();
 
-    // DB読み込み
-    await loadDb();
+    // DB読み込み (2_db_manager.jsの関数)
+    if(typeof loadDb === 'function') {
+        await loadDb();
+    } else {
+        console.error("loadDb function not found!");
+    }
     
-    // Canvas初期化 (audio_visuals.jsの関数)
+    // Canvas初期化 (1_audio_visuals.jsの関数)
     if(typeof initCanvas === 'function') {
         initCanvas();
         window.addEventListener('resize', initCanvas);
@@ -68,13 +73,15 @@ window.onload = async () => {
     // Geminiモデル取得
     if(currentProvider === 'gemini' && kGemini && typeof fetchModels === 'function') fetchModels(true);
     
-    populateCategorySelect(); 
-    changeCategory();
+    if(typeof populateCategorySelect === 'function') populateCategorySelect(); 
+    if(typeof changeCategory === 'function') changeCategory();
 };
 
 // --- Settings Logic ---
 function toggleProviderSettings() {
-    const p = document.getElementById('ai-provider').value;
+    const el = document.getElementById('ai-provider');
+    if(!el) return;
+    const p = el.value;
     document.querySelectorAll('.provider-config').forEach(d => d.style.display = 'none');
     const target = document.getElementById(`config-${p}`);
     if(target) target.style.display = 'block';
@@ -105,11 +112,14 @@ function saveSettings() {
     localStorage.setItem('lr_rate', speechRate);
     
     closeSettings();
+    // 設定変更を反映するためにモデル再取得などの処理があればここに追加
+    if(currentProvider === 'gemini' && kGemini && typeof fetchModels === 'function') fetchModels(true);
 }
 
 // --- Game Logic ---
 function changeCategory() {
     const sel = document.getElementById('category-select');
+    if(!sel) return;
     if (Object.keys(db).length === 0) return;
     if (!db[sel.value]) { currentCategory = Object.keys(db)[0] || 'basic'; } else { currentCategory = sel.value; }
     streak=0; updateStreakDisplay(); nextQuestion();
@@ -140,7 +150,9 @@ function nextQuestion(autoStart=false) {
     const fb=document.getElementById('feedback-area'); fb.innerText=currentMode==='speaking'?"Ready":"Listen & Select"; fb.className="feedback";
     document.getElementById('next-btn-spk').style.display='none'; document.getElementById('next-btn-lst').style.display='none'; document.getElementById('rec-btn').style.display='block';
     document.getElementById('replay-user-btn').style.display='none';
-    document.querySelector('.container').classList.remove('shake-anim','pop-anim');
+    
+    const container = document.querySelector('.container');
+    if(container) container.classList.remove('shake-anim','pop-anim');
     document.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('success'));
 
     // SRS Filter
@@ -157,14 +169,19 @@ function nextQuestion(autoStart=false) {
     targetObj = isLTarget ? currentPair.l : currentPair.r;
 
     const tEl=document.getElementById('target-word');
+    const opEl = document.getElementById('opponent-word');
+    const chL = document.getElementById('choice-l');
+    const chR = document.getElementById('choice-r');
+
     if(currentMode==='listening'){
         tEl.innerText="?????"; tEl.classList.add('blur');
-        document.getElementById('choice-l').innerText=currentPair.l.w; document.getElementById('choice-r').innerText=currentPair.r.w;
-        document.getElementById('opponent-word').innerText="???";
+        if(chL) chL.innerText=currentPair.l.w; 
+        if(chR) chR.innerText=currentPair.r.w;
+        if(opEl) opEl.innerText="???";
         setTimeout(speakModel,500);
     }else{
         tEl.innerText=targetObj.w; tEl.classList.remove('blur');
-        document.getElementById('opponent-word').innerText=(isLTarget?currentPair.r:currentPair.l).w;
+        if(opEl) opEl.innerText=(isLTarget?currentPair.r:currentPair.l).w;
         if(typeof renderPhonemes === 'function') renderPhonemes();
         if(autoStart && typeof toggleRecord === 'function') setTimeout(toggleRecord,500);
     }
@@ -180,7 +197,7 @@ function updateWordStats(isCorrect) {
         currentPair.streak = 0;
         currentPair.nextReview = Date.now();
     }
-    saveDb();
+    if(typeof saveDb === 'function') saveDb();
 }
 
 // Utils
