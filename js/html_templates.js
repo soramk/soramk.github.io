@@ -76,7 +76,7 @@ const HTML_TEMPLATES = {
             <ul id="history-list" class="history-list"></ul>
         </div>
     </div>
-    `, // カンマ
+    `, 
 
     // 2. スタート画面
     startOverlay: `
@@ -86,37 +86,66 @@ const HTML_TEMPLATES = {
         <p>Tap to Unlock Audio</p>
         <button class="start-btn" onclick="unlockAudio()">START</button>
     </div>
-    `, // カンマ
+    `, 
 
-    // 3. 設定モーダル
+    // 3. 設定モーダル (修正: プロバイダー選択とOpenAIキー追加)
     settingsModal: `
     <div id="settings-modal" class="modal">
         <div class="modal-content">
-            <div class="modal-header"><h3>⚙️ API Settings</h3><button class="btn-icon" onclick="closeSettings()">×</button></div>
-            <div style="text-align:left;">
-                <div style="margin-bottom:15px;">
-                    <label style="font-size:0.8rem; font-weight:bold; color:var(--text);">1. Gemini API Key</label>
-                    <input type="password" id="api-key" placeholder="Gemini API Key" style="width:100%; padding:10px; margin-top:5px; box-sizing:border-box; border-radius:6px; border:1px solid rgba(128,128,128,0.3); background:rgba(128,128,128,0.1); color:var(--text);">
-                    <button onclick="fetchModels()" class="btn-small" style="width:100%; margin-top:5px;">🔄 Update Models</button>
-                </div>
+            <div class="modal-header"><h3>⚙️ Settings</h3><button class="btn-icon" onclick="closeSettings()">×</button></div>
+            <div style="text-align:left; max-height:70vh; overflow-y:auto;">
                 
-                <div style="margin-bottom:15px;">
-                    <label style="font-size:0.8rem; font-weight:bold; color:var(--text);">2. AI Model</label>
-                    <select id="model-select" style="width:100%; padding:10px; margin-top:5px; box-sizing:border-box;" disabled><option>Fetch first...</option></select>
+                <div style="margin-bottom:20px; border-bottom:1px solid #ddd; padding-bottom:15px;">
+                    <label style="font-size:0.9rem; font-weight:bold; color:var(--primary);">🎯 AI Provider</label>
+                    <select id="ai-provider" style="width:100%; padding:10px; margin-top:5px; font-weight:bold;" onchange="toggleProviderSettings()">
+                        <option value="gemini">Google Gemini (Recommended)</option>
+                        <option value="openai">OpenAI (Whisper + GPT)</option>
+                        <option value="web">Browser Native (Free/Fast)</option>
+                    </select>
                 </div>
 
-                <div style="margin-bottom:20px;">
-                    <label style="font-size:0.8rem; font-weight:bold; color:var(--text);">3. 🗣️ Speech Speed: <span id="rate-val">0.8</span>x</label>
+                <div id="config-gemini" class="provider-config">
+                    <div style="margin-bottom:15px;">
+                        <label style="font-size:0.8rem; font-weight:bold; color:var(--text);">Gemini API Key</label>
+                        <input type="password" id="api-key-gemini" placeholder="AIzaSy..." style="width:100%; padding:10px; margin-top:5px; box-sizing:border-box; border-radius:6px; border:1px solid rgba(128,128,128,0.3);">
+                        <button onclick="fetchModels()" class="btn-small" style="width:100%; margin-top:5px;">🔄 Update Gemini Models</button>
+                    </div>
+                    <div style="margin-bottom:15px;">
+                        <label style="font-size:0.8rem; font-weight:bold; color:var(--text);">Model</label>
+                        <select id="model-select" style="width:100%; padding:10px; margin-top:5px;" disabled><option>Fetch first...</option></select>
+                    </div>
+                </div>
+
+                <div id="config-openai" class="provider-config" style="display:none;">
+                    <div style="margin-bottom:15px;">
+                        <label style="font-size:0.8rem; font-weight:bold; color:var(--text);">OpenAI API Key</label>
+                        <input type="password" id="api-key-openai" placeholder="sk-..." style="width:100%; padding:10px; margin-top:5px; box-sizing:border-box; border-radius:6px; border:1px solid rgba(128,128,128,0.3);">
+                        <p style="font-size:0.7rem; color:var(--text); opacity:0.7;">Uses Whisper-1 (Speech) & GPT-4o-mini (Advice)</p>
+                    </div>
+                </div>
+
+                <div id="config-web" class="provider-config" style="display:none;">
+                    <p style="font-size:0.8rem; color:var(--text); padding:10px; background:rgba(128,128,128,0.1); border-radius:6px;">
+                        🚀 <b>Web Speech API</b> uses the browser's built-in engine.<br>
+                        • No API Key required<br>
+                        • Completely Free<br>
+                        • Very Fast<br>
+                        (Note: AI advice will be generic)
+                    </p>
+                </div>
+
+                <div style="margin-bottom:20px; margin-top:20px;">
+                    <label style="font-size:0.8rem; font-weight:bold; color:var(--text);">🗣️ Playback Speed: <span id="rate-val">0.8</span>x</label>
                     <input type="range" id="speech-rate" min="0.5" max="1.5" step="0.1" value="0.8" style="width:100%; margin-top:5px;" oninput="document.getElementById('rate-val').innerText=this.value">
                 </div>
 
-                <button onclick="saveSettings()" class="btn-main" style="width:100%; padding:12px; border:none; border-radius:8px; cursor:pointer;">Save</button>
+                <button onclick="saveSettings()" class="btn-main" style="width:100%; padding:12px; border:none; border-radius:8px; cursor:pointer;">Save Settings</button>
             </div>
         </div>
     </div>
-    `, // カンマ
+    `, 
 
-    // 4. DBマネージャーモーダル
+    // 4. DBマネージャー (変更なし)
     dbManagerModal: `
     <div id="db-manager-modal" class="modal">
         <div class="modal-content" style="max-width: 800px; height: 80vh;">
