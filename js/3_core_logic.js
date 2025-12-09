@@ -20,13 +20,14 @@ var audioChunks = [];
 var userAudioBlob = null;
 var audioCtx = null;
 var analyser = null;
+var audioSourceNode = null; // ★追加: 音声入力ノードを保持してGCを防ぐ
 var dataArray = null;
 var canvasCtx = null;
-var currentStream = null; // ★追加: マイク入力ストリーム管理用
+var currentStream = null;
 
 // 3. Constants
 const VAD_THRESHOLD = 15;
-const VAD_SILENCE = 1200;
+const VAD_SILENCE = 1200; // 1.2秒沈黙で停止
 
 // 4. Visualizer State
 var visMode = 'wave'; 

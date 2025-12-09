@@ -90,7 +90,7 @@ function initCanvas(){
     }
 }
 
-// ★ 新規追加: どのプロバイダーでも共通して呼び出せる可視化開始関数
+// ★ 修正: GC対策のためグローバル変数を活用
 function startAudioVisualization(stream) {
     if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -101,13 +101,16 @@ function startAudioVisualization(stream) {
     analyser.smoothingTimeConstant = 0.8;
     dataArray = new Uint8Array(analyser.frequencyBinCount);
     
-    // マイクストリームをAnalyserに接続
-    const src = audioCtx.createMediaStreamSource(stream);
-    src.connect(analyser);
+    // 古いソースがあれば切断
+    if(audioSourceNode) audioSourceNode.disconnect();
+    
+    // ★ グローバル変数に代入してGCを防ぐ
+    audioSourceNode = audioCtx.createMediaStreamSource(stream);
+    audioSourceNode.connect(analyser);
     
     resetVisualizerState();
     initCanvas();
-    visualize(); // ループ開始
+    visualize(); 
 }
 
 function resetVisualizerState() {
@@ -149,12 +152,14 @@ function updateVisExplanation() {
     if(el) el.innerHTML = explTexts[visMode];
 }
 
+// ★ Visualize Loop
 function visualize(){
     if(!isRecording) return;
     requestAnimationFrame(visualize);
     
     const ctx=canvasCtx, w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
     
+    // 常に周波数データを取得 (VAD, Spectrogram用)
     analyser.getByteFrequencyData(dataArray);
 
     if(frequencySum && frequencySum.length === dataArray.length) {
@@ -162,6 +167,7 @@ function visualize(){
         frequencyCount++;
     }
 
+    // スペクトログラム更新
     const specCtx = specCanvas.getContext('2d');
     specCtx.drawImage(specCanvas, -1, 0); 
     for(let i=0; i<dataArray.length; i++){
@@ -172,6 +178,7 @@ function visualize(){
         specCtx.fillRect(specCanvas.width-1, y, 1, 2);
     }
 
+    // VAD (Auto Stop)
     let sum = 0;
     for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
     const vol = Math.floor((sum/dataArray.length)*2); 
@@ -180,17 +187,17 @@ function visualize(){
 
     const autoStop = document.getElementById('toggle-auto-stop');
     if(autoStop && autoStop.checked){
+        // 音量閾値チェック
         if(vol > VAD_THRESHOLD){ hasSpoken=true; silenceStart=Date.now(); }
         else if(hasSpoken && Date.now()-silenceStart > VAD_SILENCE){ 
-            // 循環参照を防ぐため、ここでの自動停止はUI側のtoggleRecordを呼ぶのではなく
-            // カスタムイベントか、グローバル関数経由が望ましいが、
-            // 簡易的に toggleRecord がグローバルにある前提で呼ぶ
+            // 停止処理呼び出し
             if(typeof toggleRecord === 'function') toggleRecord(); 
             hasSpoken=false; 
             return; 
         }
     }
 
+    // 画面描画
     ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
 
     if(visMode === 'spectrogram') {
@@ -204,6 +211,7 @@ function visualize(){
             x += barW + 1;
         }
     } else {
+        // Waveformの場合は時間軸データを再取得して描画
         analyser.getByteTimeDomainData(dataArray); 
         ctx.lineWidth=2; ctx.strokeStyle='#0ea5e9'; ctx.beginPath();
         const slice=w*1.0/dataArray.length; let x=0;
