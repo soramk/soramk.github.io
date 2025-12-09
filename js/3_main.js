@@ -9,11 +9,21 @@ let selectedLevel = null;
 
 // --- Init ---
 window.onload = async () => {
+    // 最初にHTML部品を生成する
+    if(typeof injectUI === 'function') injectUI();
+
     await loadDb();
     initCanvas(); 
     window.addEventListener('resize', initCanvas);
+    
+    // HTML生成後に要素を取得するのでエラーにならない
     const key = localStorage.getItem('gemini_key');
-    if(key) { document.getElementById('api-key').value=key; fetchModels(true); }
+    if(key) { 
+        const keyInput = document.getElementById('api-key');
+        if(keyInput) keyInput.value = key; 
+        fetchModels(true); 
+    }
+    
     const rate = localStorage.getItem('lr_rate');
     if(rate) speechRate = parseFloat(rate);
     
@@ -22,6 +32,7 @@ window.onload = async () => {
 };
 
 // --- Core Logic ---
+// (これ以降のコードは前回の修正版と同じなので変更不要ですが、念のためすべて記載します)
 function changeCategory() {
     const sel = document.getElementById('category-select');
     if (Object.keys(db).length === 0) return;
@@ -140,7 +151,7 @@ async function toggleRecord() {
             userAudioBlob=blob; 
             document.getElementById('replay-user-btn').style.display='block';
 
-            // Decode for Visualization History (これで静的表示データを作成)
+            // Decode for Visualization History
             const arrayBuffer = await blob.arrayBuffer();
             const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
             renderStaticResult(audioBuffer); 
@@ -151,7 +162,6 @@ async function toggleRecord() {
         isRecording=true; hasSpoken=false; silenceStart=0;
         btn.classList.add('recording'); btn.innerText="■ Stop";
         
-        // ★ 録音開始時にCanvasをクリアする (Reset)
         resetVisualizerState();
         initCanvas(); 
         visualize(); 
@@ -167,14 +177,13 @@ function stopRecordingInternal() {
     }
 }
 
-// ★ Prompt Update: Force Japanese JSON ★
+// Prompt: Force Japanese JSON
 async function sendToGemini(blob, mime) {
     const k=document.getElementById('api-key').value, m=document.getElementById('model-select').value;
     const b64=await new Promise(r=>{const fr=new FileReader(); fr.onloadend=()=>r(fr.result.split(',')[1]); fr.readAsDataURL(blob);});
     
     const url=`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${k}`;
     
-    // プロンプト修正: 明示的に日本語を指定し、JSON構造を強制
     const promptText = `
     Input: Audio of a user trying to pronounce the English word "${targetObj.w}".
     Task:
@@ -192,7 +201,7 @@ async function sendToGemini(blob, mime) {
 
     const p={
         contents:[{parts:[{text:promptText},{inline_data:{mime_type:mime.split(';')[0],data:b64}}]}],
-        generationConfig: { response_mime_type: "application/json" } // JSONモードを強制
+        generationConfig: { response_mime_type: "application/json" }
     };
 
     try{
@@ -231,7 +240,6 @@ function checkPronunciation(aiResult) {
         if(auto) setTimeout(()=>nextQuestion(true),1500); else document.getElementById('next-btn-spk').style.display='block';
     }else{
         sfx.wrong(); cont.classList.add('shake-anim');
-        // アドバイスを表示
         const adviceText = aiResult.advice || "もう一度トライ！";
         fb.innerHTML=`⚠️ ${inp}<br><small style="font-size:0.8rem; color:var(--text); font-weight:bold;">💡 ${adviceText}</small>`; 
         fb.className="feedback incorrect"; streak=0;
