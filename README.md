@@ -1,83 +1,112 @@
-# L/R Master (v28)
+# L/R Master
 L/R Master は、日本人英語学習者にとって最も困難とされる「L」と「R」の発音・聞き分けを克服するために開発された、AI搭載型のWebアプリケーションです。
 
-Google Gemini APIによるリアルタイムの発音判定・コーチング機能と、Web Audio APIによる音声可視化（スペクトログラム等）を組み合わせ、理論と実践の両面から発音改善をサポートします。
+Google Gemini、OpenAI (Whisper + GPT)、またはブラウザ標準の音声認識を選択して利用可能で、Web Audio APIによる「声紋（スペクトログラム）」の可視化機能も搭載しています。
 
-🚀 主な機能
+🚀 新機能 & アップデート (v29)
+1. 🤖 選べる3つのAIプロバイダー
+設定画面から、用途や予算に合わせて判定エンジンを切り替えられるようになりました。
+
+Google Gemini (推奨)
+
+特徴: 高速かつ高精度。マルチモーダルな理解力を活かし、的確なアドバイスを提供。
+
+コスト: 無料枠（Free Tier）で十分実用可能。
+
+OpenAI (Whisper + GPT-4o-mini)
+
+特徴: 世界最高峰の音声認識モデル「Whisper」による正確な文字起こしと、GPTによる自然なアドバイス。
+
+コスト: API利用料が発生（従量課金）。
+
+Web Speech API (Browser Native)
+
+特徴: ブラウザ内蔵エンジンを使用。APIキー不要・完全無料・爆速。
+
+注意: 簡易的な判定となり、アドバイスは汎用的なものになります。
+
+2. 🏗️ モジュラー構成へのリファクタリング
+保守性を高めるため、JavaScriptのロジックを責務ごとに分割しました（Core, API, UI Flowなど）。
+
+🌟 主な機能
 1. 🗣️ Speaking Mode (発音練習)
-AI発音判定: 録音した音声をGemini APIに送信し、正しく発音できているかを判定します。
+AI発音判定: 録音した音声をAIが解析し、正誤を判定。
 
-AIコーチング: 発音が間違っていた場合、AIが「舌の位置」や「唇の形」について、日本語で具体的なアドバイスをフィードバックします。
+AIコーチング: 発音が間違っていた場合、「舌の位置」や「唇の形」について、日本語で具体的なアドバイスをフィードバックします。
 
-SRS (間隔反復学習): 苦手な単語（間違いが続いた単語）を自動的に優先して出題し、効率的な記憶定着を促します。
+SRS (間隔反復学習): 苦手な単語を自動的に優先出題し、記憶定着を促します。
 
-2. 👂 Listening Mode (聞き分け練習)
-LとRのミニマルペア（例: Light vs Right）を聞き分けるクイズモードです。
-
-ネイティブに近い合成音声（Web Speech API）を使用。
-
-3. 📊 Audio Visualizer (音声可視化)
+2. 📊 Audio Visualizer (音声可視化)
 発音時の音声をリアルタイム、および録音後に静止画として分析できます。タップで3つのモードを切り替え可能です。
 
 WAVE (波形): 音のリズムや強弱を確認。
 
-SPECTROGRAM (声紋): 周波数成分の時間変化を可視化。L/Rの識別に重要な第3フォルマント（F3）の動きを目で見て確認できます。
+SPECTROGRAM (声紋): **L/R識別の鍵となる第3フォルマント（F3）**の変化を視覚的に確認できます。
 
 SPECTRUM (周波数分布): 声の高さの成分分布を表示。
 
-4. 📝 Word Database Manager
-カスタマイズ可能: デフォルトの単語リストに加え、独自の単語ペアを追加・編集・削除できます。
+3. 📝 Word Database Manager
+カスタマイズ可能: 独自の単語ペアを追加・編集・削除可能。
 
-インポート/エクスポート: 作成した単語リストをJSON形式でバックアップ、または共有できます。
+インポート/エクスポート: JSON形式でデータのバックアップや共有が可能。
 
-5. 📱 PWA (Progressive Web App) 対応
-スマートフォン（iOS/Android）の「ホーム画面に追加」を行うことで、ネイティブアプリのようにフルスクリーンで動作します。
-
-🛠️ 技術スタック
-サーバーレスなSPA（Single Page Application）として構築されており、静的ホスティング環境であればどこでも動作します。
-
-Frontend: HTML5, CSS3, Vanilla JavaScript (ES6+)
-
-フレームワーク不使用の軽量設計
-
-AI API: Google Gemini API (Flash / Pro models)
-
-Audio: Web Audio API (Analysis), Web Speech API (TTS)
-
-Storage: LocalStorage (設定、学習履歴、単語DBの保存)
+4. 📱 PWA (Progressive Web App) 対応
+スマートフォンの「ホーム画面に追加」に対応。ネイティブアプリのようなフルスクリーン体験を提供します。
 
 📂 ディレクトリ構成
-保守性を高めるため、HTMLテンプレートとロジックを分離しています。
+機能ごとにJSファイルを分割し、可読性とメンテナンス性を向上させました。
+
+Plaintext
 
 .
-├── index.html          # エントリーポイント（スクリプト読み込みのみ）
+├── index.html          # エントリーポイント（スクリプト読み込み構成）
 ├── style.css           # スタイルシート
-├── data/               # 単語データセット
-│   ├── basic.js
-│   ├── intermediate.js
-│   └── ...
+├── data/               # 単語データセット (basic.js, advanced.js etc.)
 └── js/
-    ├── 1_audio_visuals.js  # 音声処理・可視化ロジック
-    ├── 2_db_manager.js     # DB管理・設定ロジック
-    ├── 3_main.js           # アプリのコアロジック・Gemini連携
+    ├── 1_audio_visuals.js  # 音声可視化 (Canvas, Web Audio API)
+    ├── 2_db_manager.js     # DB操作・設定管理
+    ├── 3_core_logic.js     # アプリの状態管理・初期化・SRSロジック
+    ├── 4_api_client.js     # API通信 (Gemini, OpenAI, Web Speech)
+    ├── 5_app_flow.js       # UIインタラクション・録音フロー制御
     ├── html_templates.js   # HTMLテンプレート文字列定義
-    └── ui_components.js    # UI描画・注入ロジック
+    └── ui_components.js    # DOM生成・注入ロジック
+🛠️ 技術スタック
+Frontend: HTML5, CSS3, Vanilla JavaScript (ES6 Modules like structure)
+
+AI API:
+
+Google Gemini API (Flash / Pro)
+
+OpenAI API (Whisper-1, GPT-4o-mini)
+
+Browser APIs:
+
+Web Audio API (Spectral Analysis)
+
+Web Speech API (Recognition & TTS)
+
+Storage: LocalStorage
+
 ⚙️ セットアップと使用方法
 デプロイ:
 
-GitHub Pages、Netlify、Vercelなどの静的ホスティングサービスにリポジトリをアップロードするだけで動作します。
-
-ローカルで動かす場合は、VS Codeの「Live Server」などを利用してください。
+静的ファイルのみで構成されているため、GitHub PagesやNetlify等にアップロードするだけで動作します。
 
 APIキーの設定:
 
-アプリ起動後、右上の「⚙️ (設定)」ボタンを押し、Google Gemini API Key を入力してください。
+アプリ右上の「⚙️ (設定)」ボタンを開きます。
 
-Google AI Studio から無料でキーを取得可能です。
+AI Provider を選択し、利用するサービスのAPIキーを入力します。
 
-モデルの選択:
+Gemini: Google AI Studio で取得。
 
-APIキー入力後、「🔄 Update Models」を押して利用可能なモデルリスト（Gemini 1.5 Flash等）を取得し、選択して保存します。
+OpenAI: OpenAI Platform で取得。
+
+Web Speech: キー入力不要ですぐに使えます。
+
+モデルの更新:
+
+Gemini選択時は「🔄 Update Models」を押してモデルリストを取得してください。
 
 📄 ライセンス
 This project is open source and available under the MIT License.
