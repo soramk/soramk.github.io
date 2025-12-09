@@ -20,14 +20,14 @@ var audioChunks = [];
 var userAudioBlob = null;
 var audioCtx = null;
 var analyser = null;
-var audioSourceNode = null; // ★追加: 音声入力ノードを保持してGCを防ぐ
+var audioSourceNode = null;
 var dataArray = null;
 var canvasCtx = null;
 var currentStream = null;
 
 // 3. Constants
 const VAD_THRESHOLD = 15;
-const VAD_SILENCE = 1200; // 1.2秒沈黙で停止
+const VAD_SILENCE = 1200;
 
 // 4. Visualizer State
 var visMode = 'wave'; 
@@ -38,11 +38,13 @@ window.onload = async () => {
 
     if(typeof loadDb === 'function') await loadDb();
     
+    // Canvas初期化
     if(typeof initCanvas === 'function') {
         initCanvas();
         window.addEventListener('resize', initCanvas);
     }
     
+    // 設定読み込み
     const p = localStorage.getItem('lr_provider');
     if(p) currentProvider = p;
     
@@ -62,6 +64,7 @@ window.onload = async () => {
     }
     if(rate) speechRate = parseFloat(rate);
     
+    // Geminiモデル取得
     if(currentProvider === 'gemini' && kGemini && typeof fetchModels === 'function') fetchModels(true);
     
     if(typeof populateCategorySelect === 'function') populateCategorySelect(); 

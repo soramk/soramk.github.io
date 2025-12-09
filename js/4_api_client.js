@@ -115,21 +115,22 @@ async function sendToOpenAI(blob, mime) {
     }
 }
 
-// --- 3. Web Speech API Implementation (Logic Only) ---
+// --- 3. Web Speech API Implementation ---
 let webRecognition = null;
 
 function startWebSpeech() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SpeechRecognition) { alert("Web Speech API not supported."); return; }
 
-    // すでに動いていたら止める
+    // 前回のインスタンスがあれば確実に停止
     if(webRecognition) {
-        try { webRecognition.stop(); } catch(e){}
+        try { webRecognition.stop(); webRecognition.abort(); } catch(e){}
+        webRecognition = null;
     }
 
     webRecognition = new SpeechRecognition();
     webRecognition.lang = 'en-US';
-    webRecognition.interimResults = false; // 確定結果のみ
+    webRecognition.interimResults = false;
     webRecognition.maxAlternatives = 1;
 
     webRecognition.onstart = () => {
@@ -145,7 +146,6 @@ function startWebSpeech() {
         let isOk = false;
         let advice = "";
 
-        // 判定ロジック
         if(heard.split(/[\s\.\?!]+/).includes(target)) {
             isOk = true;
         } else {
@@ -157,6 +157,7 @@ function startWebSpeech() {
             }
         }
         
+        // 認識成功したら、アプリ側に結果を渡す
         if(typeof checkPronunciation === 'function') {
             checkPronunciation({ heard: heard, correct: isOk, advice: advice });
         }
@@ -164,27 +165,28 @@ function startWebSpeech() {
 
     webRecognition.onerror = (event) => {
         console.error("Web Speech Error:", event.error);
-        if(event.error === 'no-speech') return; // 無視
-        
-        if(typeof handleError === 'function') {
-            handleError({message: "Web Speech Error: " + event.error});
+        if(event.error === 'no-speech' || event.error === 'aborted') {
+            // これらは無視して停止処理へ
+        } else {
+            if(typeof handleError === 'function') {
+                handleError({message: "Web Speech Error: " + event.error});
+            }
         }
-        
-        // エラー時は強制停止
+        // エラー時も停止処理を呼んでボタンを戻す
         if(typeof stopRecordingInternal === 'function') stopRecordingInternal();
     };
 
     webRecognition.onend = () => {
-        // 自然終了した場合の処理
-        // app_flow.js側で isRecording がまだ true なら、UIをリセットする
-        // ただし、checkPronunciationが呼ばれた後はすでに停止処理が走っているので何もしない
+        // 自然終了時も、まだ録音中フラグが立っていたら停止処理へ
+        if(isRecording && typeof stopRecordingInternal === 'function') {
+            stopRecordingInternal();
+        }
     };
 
     try {
         webRecognition.start();
     } catch(e) {
-        console.error("Failed to start recognition", e);
-        alert("音声認識を開始できませんでした。リロードして再試行してください。");
+        console.error("Start Failed", e);
         if(typeof stopRecordingInternal === 'function') stopRecordingInternal();
     }
 }

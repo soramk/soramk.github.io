@@ -19,17 +19,16 @@ async function toggleRecord() {
     try {
         // UI初期化
         btn.classList.add('recording');
-        btn.innerText = "Wait..."; // 初期化中表示
+        btn.innerText = "Wait..."; 
         
         // 1. マイクストリーム取得 (波形表示用)
-        // Web Speech APIと併用する場合、ここでエラーが出ることがあるのでtry-catch
-        let stream;
+        // 注意: Web Speech APIはマイクを排他制御する場合があるので、取得に失敗しても認識だけは続行させる
+        let stream = null;
         try {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             currentStream = stream; // グローバル保持
         } catch(err) {
             console.warn("Visualizer mic access failed:", err);
-            // 波形が出なくても音声認識は動く可能性があるので続行、ただし波形は出ない
         }
 
         // 2. ビジュアライザー起動 (ストリームが取れた場合のみ)
@@ -47,12 +46,12 @@ async function toggleRecord() {
             // ★ Web Speech API
             btn.innerText = "■ Stop (Web)";
             
-            // 少し待ってから認識開始（マイク競合回避のため）
+            // マイク取得との競合を避けるため、少し待機してから開始
             setTimeout(() => {
-                if(isRecording) { // 待ってる間に停止されてなければ開始
+                if(isRecording) { 
                     if(typeof startWebSpeech === 'function') startWebSpeech(); 
                 }
-            }, 100);
+            }, 200);
 
         } else {
             // ★ Gemini / OpenAI (MediaRecorder)
@@ -78,9 +77,11 @@ async function toggleRecord() {
                     document.getElementById('replay-user-btn').style.display = 'block';
 
                     // 静的波形生成
-                    const arrayBuffer = await blob.arrayBuffer();
-                    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                    if(typeof renderStaticResult === 'function') renderStaticResult(audioBuffer); 
+                    if(audioCtx) {
+                        const arrayBuffer = await blob.arrayBuffer();
+                        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                        if(typeof renderStaticResult === 'function') renderStaticResult(audioBuffer); 
+                    }
 
                     // API送信
                     if(currentProvider === 'openai') {
@@ -109,7 +110,7 @@ function stopRecordingInternal() {
     if(btn) {
         btn.classList.remove('recording');
         btn.classList.add('processing');
-        btn.innerText = "Analyzing..."; // 結果待ち
+        btn.innerText = "Analyzing..."; 
     }
 
     // Web Speech停止
@@ -125,6 +126,18 @@ function stopRecordingInternal() {
         if(currentStream) {
              currentStream.getTracks().forEach(t => t.stop());
              currentStream = null;
+        }
+        
+        // Web SpeechはMediaRecorder.onstopがないので、手動でボタンを戻す必要がある
+        // ただし onresult が呼ばれたときはそちらで処理される
+        if(currentProvider === 'web') {
+             // Analyzing...は一瞬
+             setTimeout(()=>{
+                 if(btn) {
+                     btn.classList.remove('processing');
+                     btn.innerText = "🎤 Start";
+                 }
+             }, 500);
         }
     }
 }

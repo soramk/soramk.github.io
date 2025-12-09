@@ -90,7 +90,7 @@ function initCanvas(){
     }
 }
 
-// ★ 修正: GC対策のためグローバル変数を活用
+// ★ 修正: GC対策のためグローバル変数を活用 + frequencySum初期化を確実に
 function startAudioVisualization(stream) {
     if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -104,7 +104,6 @@ function startAudioVisualization(stream) {
     // 古いソースがあれば切断
     if(audioSourceNode) audioSourceNode.disconnect();
     
-    // ★ グローバル変数に代入してGCを防ぐ
     audioSourceNode = audioCtx.createMediaStreamSource(stream);
     audioSourceNode.connect(analyser);
     
@@ -115,8 +114,9 @@ function startAudioVisualization(stream) {
 
 function resetVisualizerState() {
     lastAudioBuffer = null;
+    // ★ 修正: 配列の初期化を確実に
     if(analyser) {
-        frequencySum = new Uint32Array(analyser.frequencyBinCount);
+        frequencySum = new Float32Array(analyser.frequencyBinCount); 
     }
     frequencyCount = 0;
     
@@ -127,7 +127,9 @@ function resetVisualizerState() {
     const c=document.getElementById("visualizer");
     if(c) {
         const ctx=c.getContext("2d");
-        ctx.fillStyle='#020617'; ctx.fillRect(0,0,c.width,c.height);
+        const w = c.width / (window.devicePixelRatio||1);
+        const h = c.height / (window.devicePixelRatio||1);
+        ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
     }
 }
 
@@ -136,38 +138,38 @@ function toggleVisMode() {
     else if (visMode === 'spectrogram') visMode = 'frequency';
     else visMode = 'wave';
 
-    const label = document.getElementById('vis-label');
-    if(label) {
-        if(visMode === 'wave') label.innerText = "WAVE";
-        else if(visMode === 'spectrogram') label.innerText = "SPECTROGRAM";
-        else label.innerText = "SPECTRUM"; 
-    }
-    
     updateVisExplanation();
     if(!isRecording && lastAudioBuffer) renderStaticResult(lastAudioBuffer);
 }
 
 function updateVisExplanation() {
     const el = document.getElementById('vis-explanation');
+    const label = document.getElementById('vis-label');
+    
     if(el) el.innerHTML = explTexts[visMode];
+    if(label) {
+        if(visMode === 'wave') label.innerText = "WAVE";
+        else if(visMode === 'spectrogram') label.innerText = "SPECTROGRAM";
+        else label.innerText = "SPECTRUM"; 
+    }
 }
 
-// ★ Visualize Loop
 function visualize(){
     if(!isRecording) return;
     requestAnimationFrame(visualize);
     
     const ctx=canvasCtx, w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
     
-    // 常に周波数データを取得 (VAD, Spectrogram用)
+    // 常に周波数データを取得
     analyser.getByteFrequencyData(dataArray);
 
+    // Spectrum用データの蓄積
     if(frequencySum && frequencySum.length === dataArray.length) {
         for(let i=0; i<dataArray.length; i++) frequencySum[i] += dataArray[i];
         frequencyCount++;
     }
 
-    // スペクトログラム更新
+    // Spectrogram用オフスクリーン更新
     const specCtx = specCanvas.getContext('2d');
     specCtx.drawImage(specCanvas, -1, 0); 
     for(let i=0; i<dataArray.length; i++){
@@ -187,10 +189,8 @@ function visualize(){
 
     const autoStop = document.getElementById('toggle-auto-stop');
     if(autoStop && autoStop.checked){
-        // 音量閾値チェック
         if(vol > VAD_THRESHOLD){ hasSpoken=true; silenceStart=Date.now(); }
         else if(hasSpoken && Date.now()-silenceStart > VAD_SILENCE){ 
-            // 停止処理呼び出し
             if(typeof toggleRecord === 'function') toggleRecord(); 
             hasSpoken=false; 
             return; 
@@ -211,7 +211,7 @@ function visualize(){
             x += barW + 1;
         }
     } else {
-        // Waveformの場合は時間軸データを再取得して描画
+        // Waveform
         analyser.getByteTimeDomainData(dataArray); 
         ctx.lineWidth=2; ctx.strokeStyle='#0ea5e9'; ctx.beginPath();
         const slice=w*1.0/dataArray.length; let x=0;
