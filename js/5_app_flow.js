@@ -95,10 +95,8 @@ async function toggleRecord() {
             }
 
             // ★ API分岐: Web Speech以外の場合のみ、ここでAPIに送信
-            // (Web Speechの場合は、4_api_client.js側で音声認識が進むのでここでは何もしない)
             if (currentProvider !== 'web') {
                 if(typeof sendToAI === 'function') {
-                    // 4_api_client.js の統合関数を呼ぶ
                     sendToAI(blob);
                 }
             }
@@ -109,7 +107,6 @@ async function toggleRecord() {
         // 4. Web Speech APIの場合のみ、認識エンジンも同時に回す
         if (currentProvider === 'web') {
             btn.innerText = "■ Stop (Web)";
-            // 少し待ってから認識開始（マイク競合回避の念の為）
             setTimeout(() => {
                 if(isRecording && typeof startWebSpeech === 'function') {
                     startWebSpeech(); 
@@ -137,11 +134,9 @@ function stopRecordingInternal() {
         btn.innerText = "Analyzing..."; 
     }
 
-    // Web Speech停止 (認識エンジンを止める)
+    // Web Speech停止
     if(currentProvider === 'web') {
         if(typeof stopWebSpeech === 'function') stopWebSpeech();
-        
-        // ★修正: Web Speechは通信がないため、万が一onendが呼ばれなかった時のための保険
         setTimeout(() => {
             const b = document.getElementById('rec-btn');
             if(b && (b.innerText === "Analyzing..." || b.innerText.includes("Stop"))) {
@@ -151,11 +146,10 @@ function stopRecordingInternal() {
         }, 1000);
     }
     
-    // MediaRecorder停止 (これが onstop を発火させ、波形生成を行う)
+    // MediaRecorder停止
     if(mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
     } else {
-        // 万が一Recorderが動いていない場合の保険
         if(currentStream) {
              currentStream.getTracks().forEach(t => t.stop());
              currentStream = null;
@@ -163,28 +157,109 @@ function stopRecordingInternal() {
     }
 }
 
-// スキップ処理
 function skipQuestion() {
-    // 録音中なら止める
     if(typeof isRecording !== 'undefined' && isRecording) { 
         stopRecordingInternal(); 
     }
-    
-    // SFXスキップ音 (あれば)
     if(typeof sfx !== 'undefined' && sfx.skip) sfx.skip();
-    
-    // ストリークリセット
     if(typeof streak !== 'undefined') streak = 0;
     updateStreakDisplay();
-    
-    // 次へ
     nextQuestion();
 }
 
 
-// --- Result Handling & UI Updates ---
+// --- App Navigation Flow ---
 
-// エラーハンドリング (4_api_client.jsからも呼ばれる想定)
+/**
+ * 次の問題へ進む処理
+ */
+async function nextQuestion() {
+    console.log("Moving to next question...");
+
+    // 1. 進行中の録音/認識プロセスを強制リセット
+    if (typeof isRecording !== 'undefined' && isRecording) {
+        if(typeof toggleRecord === 'function') toggleRecord(); 
+    }
+    if (typeof stopWebSpeechNow === 'function') stopWebSpeechNow();
+    if (typeof isRecording !== 'undefined') isRecording = false;
+    if (typeof updateRecordButtonUI === 'function') updateRecordButtonUI();
+
+    // 2. UIのリセット
+    const feedbackArea = document.getElementById('feedback-area');
+    if(feedbackArea) {
+        feedbackArea.innerHTML = 'Ready';
+        feedbackArea.className = 'feedback';
+    }
+    const wordArea = document.getElementById('word-area');
+    if(wordArea) wordArea.classList.remove('shake-anim', 'pop-anim');
+
+    const targetWordEl = document.getElementById('target-word');
+    if(targetWordEl) targetWordEl.classList.add('blur'); 
+
+    // 3. 次の単語データの取得
+    if (typeof db === 'undefined' || !currentCategory || !db[currentCategory]) {
+        console.warn("Database not ready or category empty.");
+        return;
+    }
+
+    const list = db[currentCategory];
+    if (list.length === 0) {
+        alert("No words in this category!");
+        return;
+    }
+
+    // ランダム選択
+    const idx = Math.floor(Math.random() * list.length);
+    currentPair = list[idx]; // グローバル変数更新
+
+    // LかRかをランダムに決定
+    isTargetL = Math.random() < 0.5;
+    
+    // ★ FIX: ここで targetObj を明示的に更新しないと、音声や正解判定がズレる
+    window.targetObj = isTargetL ? currentPair.l : currentPair.r;
+
+    // 4. 画面表示の更新
+    updateWordDisplay();
+    
+    // 発音記号と口の形の更新
+    if (typeof updatePhonemesAndMouth === 'function') {
+        updatePhonemesAndMouth(currentPair, isTargetL);
+    }
+
+    // 5. モードごとの挙動設定
+    if (currentMode === 'listening') {
+        // リスニングモード
+        setTimeout(() => speakModel(), 300); // 新しく更新された targetObj を読み上げる
+        
+        document.getElementById('controls-listening').style.display = 'grid';
+        document.getElementById('controls-speaking').style.display = 'none';
+        if(targetWordEl) targetWordEl.classList.add('blur'); // 単語は隠す
+        
+    } else {
+        // スピーキングモード
+        document.getElementById('controls-listening').style.display = 'none';
+        document.getElementById('controls-speaking').style.display = 'grid';
+        if(targetWordEl) targetWordEl.classList.remove('blur'); // 単語を表示
+    }
+}
+
+function updateWordDisplay() {
+    const targetEl = document.getElementById('target-word');
+    const opponentEl = document.getElementById('opponent-word');
+    if(!targetEl || !opponentEl) return;
+
+    if (isTargetL) {
+        targetEl.innerText = currentPair.l.w;
+        opponentEl.innerText = currentPair.r.w;
+    } else {
+        targetEl.innerText = currentPair.r.w;
+        opponentEl.innerText = currentPair.l.w;
+    }
+}
+
+
+// --- Result Handling ---
+
 function handleError(e) {
     console.error(e);
     const msg = e.message || e;
@@ -198,36 +273,25 @@ function handleError(e) {
         btn.innerText = "🎤 Start";
         btn.style.display = 'block';
     }
-    
-    // フラグ安全リセット
     isRecording = false;
 }
 
-// 判定結果のUI反映 (4_api_client.js から checkPronunciation -> handleResult 経由で呼ばれる)
-// ※ 4_api_client.js の修正版では handleResult を呼ぶようになっているため、
-//    整合性を取るために handleResult を定義し、checkPronunciation はそのエイリアスまたはラッパーとします。
-
 function handleResult(result) {
-    // result = { transcript: "...", isCorrect: true/false, advice: "..." }
-
     const inp = result.transcript;
     const isOk = result.isCorrect; 
     
     const fb = document.getElementById('feedback-area');
     const autoFlow = document.getElementById('toggle-auto-flow').checked;
-    const cont = document.querySelector('.container'); // アニメーション用
+    const cont = document.querySelector('.container');
     
     const btn = document.getElementById('rec-btn');
     if(btn) {
-        // 結果が出たらボタンをリセット
         btn.classList.remove('processing'); 
         btn.classList.remove('recording'); 
         btn.innerText = "🎤 Start";
-        // 正解したら「次へ」ボタンが出るのでStartボタンは隠す、不正解なら再挑戦用に残す
         btn.style.display = isOk ? 'none' : 'block'; 
     }
 
-    // 統計更新 (3_core_logic.js等にある想定)
     if(typeof updateWordStats === 'function') updateWordStats(isOk); 
     
     // 履歴追加
@@ -235,7 +299,6 @@ function handleResult(result) {
     addToHistory(targetText, inp, isOk);
 
     if(isOk){
-        // 正解時
         if(typeof sfx !== 'undefined') sfx.correct(); 
         if(cont) {
             cont.classList.remove('shake-anim');
@@ -250,7 +313,6 @@ function handleResult(result) {
         
         if(typeof streak !== 'undefined') streak++; 
         
-        // Auto Next判定
         if(autoFlow) {
             setTimeout(() => nextQuestion(), 1500);
         } else {
@@ -258,7 +320,6 @@ function handleResult(result) {
             if(nextBtn) nextBtn.style.display = 'block';
         }
     } else {
-        // 不正解時
         if(typeof sfx !== 'undefined') sfx.wrong(); 
         if(cont) {
             cont.classList.remove('pop-anim');
@@ -278,7 +339,6 @@ function handleResult(result) {
     updateStreakDisplay();
 }
 
-// 旧コード互換用 (4_api_client.jsの一部がまだこれを呼んでいる場合用)
 function checkPronunciation(result) {
     handleResult({
         transcript: result.heard || result.transcript,
@@ -287,14 +347,15 @@ function checkPronunciation(result) {
     });
 }
 
-
-// --- Listening Mode ---
+// --- Listening Mode Check ---
 
 function checkListening(uL){
-    // リスニングモード: ユーザーがLかRかボタンを押した時の判定
-    // uL: trueならLボタン、falseならRボタン
+    // uL: true=User clicked L, false=User clicked R
     
+    // ★ FIX: グローバルのisTargetLを確実に取得
     const isLTargetGlobal = (typeof isTargetL !== 'undefined') ? isTargetL : true;
+    
+    // 判定ロジック: (正解がL かつ ユーザー選択L) または (正解がR かつ ユーザー選択R)
     const correct = (isLTargetGlobal && uL) || (!isLTargetGlobal && !uL);
     
     const fb = document.getElementById('feedback-area');
@@ -303,17 +364,14 @@ function checkListening(uL){
     
     // 正解の単語を表示（ぼかし解除）
     const targetEl = document.getElementById('target-word');
-    const opponentEl = document.getElementById('opponent-word');
     if(targetEl) {
         targetEl.classList.remove('blur');
-        // 念のためテキスト再セット (targetObjはグローバル想定)
+        // 表示テキストが最新の正解と合っているか念のため更新
         if(typeof targetObj !== 'undefined') targetEl.innerText = targetObj.w; 
     }
     
-    // 統計更新
     if(typeof updateWordStats === 'function') updateWordStats(correct);
     
-    // 履歴
     const targetText = targetEl ? targetEl.innerText : "???";
     addToHistory(targetText, uL?"Selected L":"Selected R", correct);
     
@@ -329,7 +387,6 @@ function checkListening(uL){
         }
         if(typeof streak !== 'undefined') streak++;
         
-        // 選択ボタンの色付け
         const btnId = uL ? 'choice-l' : 'choice-r';
         const btn = document.getElementById(btnId);
         if(btn) btn.classList.add('success');
@@ -338,7 +395,7 @@ function checkListening(uL){
             setTimeout(()=>nextQuestion(), 1200);
         } else {
             const nextBtn = document.getElementById('next-btn-lst');
-            if(nextBtn) nextBtn.style.display = 'grid'; // または block
+            if(nextBtn) nextBtn.style.display = 'grid';
         }
     } else {
         if(typeof sfx !== 'undefined') sfx.wrong(); 
@@ -358,7 +415,6 @@ function checkListening(uL){
     updateStreakDisplay();
 }
 
-
 // --- Utils ---
 
 function replayUserAudio() {
@@ -371,12 +427,9 @@ function replayUserAudio() {
 function addToHistory(target, heard, isOk){
     const list = document.getElementById('history-list');
     if(!list) return;
-    
     const li = document.createElement('li');
     li.className = 'history-item';
     li.innerHTML = `<span class="${isOk?'res-ok':'res-ng'}">${isOk?'OK':'NG'}</span> <span>Target: ${target} / AI: ${heard}</span>`;
-    
-    // 先頭に追加
     list.prepend(li);
 }
 
