@@ -1,53 +1,103 @@
-// --- Global State Definitions (The Single Source of Truth) ---
+/**
+ * 3_core_logic.js
+ * アプリケーションの「データ状態（グローバル変数）」と「起動シーケンス」のみを管理します。
+ * ※ 具体的な画面遷移やボタン動作の関数は 2_dom_events.js や 5_app_flow.js に記述されています。
+ */
 
-// 1. App State
-var db = {};
-var currentCategory = 'basic';
-var currentMode = 'speaking';
-var currentPair = {};
-var targetObj = {};
-var isLTarget = false;
-var streak = 0;
-var speechRate = 0.8;
-var currentProvider = 'gemini'; // 'gemini', 'openai', 'web'
+// --- 1. Global State Definitions (The Single Source of Truth) ---
+// 他のファイルから window.db や window.isRecording としてアクセスされます
 
-// 2. Audio & Recording State
-var isRecording = false;
-var hasSpoken = false;
-var silenceStart = 0;
-var mediaRecorder = null;
-var audioChunks = [];
-var userAudioBlob = null;
-var audioCtx = null;
-var analyser = null;
-var audioSourceNode = null;
-var dataArray = null;
-var canvasCtx = null;
-var currentStream = null;
+// App State
+window.db = {};
+window.currentCategory = 'basic';
+window.currentMode = 'speaking';
+window.currentPair = {}; // {l:{w...}, r:{w...}}
+window.targetObj = {};   // {w: "light", ...}
+window.isTargetL = true; // 正解はLかどうか
+window.streak = 0;
+window.speechRate = 0.8;
+window.currentProvider = 'gemini'; // 'gemini', 'openai', 'web'
 
-// 3. Constants
-const VAD_THRESHOLD = 15;
-const VAD_SILENCE = 1200;
+// Audio & Recording State
+window.isRecording = false;
+window.hasSpoken = false;
+window.silenceStart = 0;
+window.mediaRecorder = null;
+window.audioChunks = [];
+window.userAudioBlob = null;
+window.audioCtx = null;
+window.analyser = null;
+window.audioSourceNode = null;
+window.dataArray = null;
+window.canvasCtx = null;
+window.currentStream = null;
 
-// 4. Visualizer State
-var visMode = 'wave'; 
+// Constants
+window.VAD_THRESHOLD = 15;
+window.VAD_SILENCE = 1200;
 
-// --- Init Logic ---
-window.onload = async () => {
-    if(typeof injectUI === 'function') injectUI();
+// Visualizer State
+window.visMode = 'wave'; 
 
-    if(typeof loadDb === 'function') await loadDb();
+
+// --- 2. Init Logic (Application Entry Point) ---
+
+window.addEventListener('load', async () => {
+    console.log("App initializing...");
+
+    // 1. HTMLテンプレートの注入確認
+    // html_templates.js が既に走っているはずだが、念のため確認
+    if(typeof initHtmlTemplates === 'function' && !document.getElementById('db-manager-modal')) {
+        initHtmlTemplates();
+    }
+
+    // 2. データベース(Local Storage)のロード
+    // 2_db_manager.js で定義
+    if(typeof loadDb === 'function') {
+        await loadDb();
+    } else {
+        console.error("loadDb function not found. Check 2_db_manager.js");
+    }
     
-    // Canvas初期化
+    // 3. Canvas(ビジュアライザ)初期化
+    // 1_audio_visuals.js で定義
     if(typeof initCanvas === 'function') {
         initCanvas();
         window.addEventListener('resize', initCanvas);
     }
     
-    // 設定読み込み
-    const p = localStorage.getItem('lr_provider');
-    if(p) currentProvider = p;
+    // 4. 保存された設定の復元
+    loadSavedSettings();
     
+    // 5. カテゴリ選択肢の生成
+    if(typeof populateCategorySelect === 'function') {
+        populateCategorySelect(); 
+    }
+    
+    // 6. 最初の問題を表示
+    // 5_app_flow.js で定義
+    if(typeof nextQuestion === 'function') {
+        // カテゴリが空でないか確認してから開始
+        if(window.db && window.db[window.currentCategory] && window.db[window.currentCategory].length > 0) {
+            nextQuestion();
+        } else {
+            console.warn("No data in current category. Please import words.");
+            if(typeof openDbManager === 'function') openDbManager();
+        }
+    } else {
+        console.error("nextQuestion function not found. Check 5_app_flow.js");
+    }
+});
+
+
+// --- 3. Helper Functions (Settings Loader) ---
+
+function loadSavedSettings() {
+    // プロバイダー設定
+    const p = localStorage.getItem('lr_provider');
+    if(p) window.currentProvider = p;
+    
+    // APIキー復元
     const kGemini = localStorage.getItem('gemini_key');
     const kOpenAI = localStorage.getItem('openai_key');
     const rate = localStorage.getItem('lr_rate');
@@ -55,46 +105,34 @@ window.onload = async () => {
     const elKeyG = document.getElementById('api-key-gemini');
     const elKeyO = document.getElementById('api-key-openai');
     const elProv = document.getElementById('ai-provider');
+    const elRate = document.getElementById('speech-rate');
+    const elRateVal = document.getElementById('rate-val');
     
     if(elKeyG) elKeyG.value = kGemini || '';
     if(elKeyO) elKeyO.value = kOpenAI || '';
     if(elProv) {
-        elProv.value = currentProvider;
+        elProv.value = window.currentProvider;
+        // UIの表示切り替え (2_dom_events.js の関数)
         if(typeof toggleProviderSettings === 'function') toggleProviderSettings(); 
     }
-    if(rate) speechRate = parseFloat(rate);
     
-    // Geminiモデル取得
-    if(currentProvider === 'gemini' && kGemini && typeof fetchModels === 'function') fetchModels(true);
+    if(rate) {
+        window.speechRate = parseFloat(rate);
+        if(elRate) elRate.value = window.speechRate;
+        if(elRateVal) elRateVal.innerText = window.speechRate;
+    }
     
-    if(typeof populateCategorySelect === 'function') populateCategorySelect(); 
-    if(typeof changeCategory === 'function') changeCategory();
-};
-
-// --- Settings Logic ---
-function toggleProviderSettings() {
-    const el = document.getElementById('ai-provider');
-    if(!el) return;
-    const p = el.value;
-    document.querySelectorAll('.provider-config').forEach(d => d.style.display = 'none');
-    const target = document.getElementById(`config-${p}`);
-    if(target) target.style.display = 'block';
-}
-
-function closeSettings() { document.getElementById('settings-modal').style.display='none'; }
-function openSettings() { 
-    document.getElementById('settings-modal').style.display='flex'; 
-    const el = document.getElementById('ai-provider');
-    if(el) {
-        el.value = currentProvider;
-        toggleProviderSettings();
+    // Geminiモデルリスト取得 (APIキーがある場合のみ)
+    if(window.currentProvider === 'gemini' && kGemini && typeof fetchModels === 'function') {
+        fetchModels(true); // silent mode
     }
 }
 
-function saveSettings() {
+// 設定保存ロジック (2_dom_events.js または settings modal から呼ばれる)
+window.saveSettings = function() {
     const elProv = document.getElementById('ai-provider');
-    if(elProv) currentProvider = elProv.value;
-    localStorage.setItem('lr_provider', currentProvider);
+    if(elProv) window.currentProvider = elProv.value;
+    localStorage.setItem('lr_provider', window.currentProvider);
 
     const kGemini = document.getElementById('api-key-gemini').value;
     const kOpenAI = document.getElementById('api-key-openai').value;
@@ -102,99 +140,53 @@ function saveSettings() {
     if(kGemini) localStorage.setItem('gemini_key', kGemini);
     if(kOpenAI) localStorage.setItem('openai_key', kOpenAI);
 
-    speechRate = parseFloat(document.getElementById('speech-rate').value);
-    localStorage.setItem('lr_rate', speechRate);
-    
-    closeSettings();
-    if(currentProvider === 'gemini' && kGemini && typeof fetchModels === 'function') fetchModels(true);
-}
-
-// --- Game Logic ---
-function changeCategory() {
-    const sel = document.getElementById('category-select');
-    if(!sel) return;
-    if (Object.keys(db).length === 0) return;
-    if (!db[sel.value]) { currentCategory = Object.keys(db)[0] || 'basic'; } else { currentCategory = sel.value; }
-    streak=0; updateStreakDisplay(); nextQuestion();
-}
-
-function setMode(m) {
-    currentMode=m; document.querySelectorAll('.mode-toggle button').forEach(b=>b.classList.remove('active'));
-    if(m==='speaking'){
-        document.getElementById('mode-speak').classList.add('active');
-        document.getElementById('controls-speaking').style.display='grid';
-        document.getElementById('controls-listening').style.display='none';
-        document.getElementById('speaking-tools').style.display='block';
-        document.getElementById('target-word').classList.remove('blur');
-    }else{
-        document.getElementById('mode-listen').classList.add('active');
-        document.getElementById('controls-speaking').style.display='none';
-        document.getElementById('controls-listening').style.display='grid';
-        document.getElementById('speaking-tools').style.display='none';
-        document.getElementById('target-word').classList.add('blur');
+    const elRate = document.getElementById('speech-rate');
+    if(elRate) {
+        window.speechRate = parseFloat(elRate.value);
+        localStorage.setItem('lr_rate', window.speechRate);
     }
-    nextQuestion();
-}
-
-function nextQuestion(autoStart=false) {
-    const list = db[currentCategory];
-    if(!list || list.length === 0){ document.getElementById('target-word').innerText = "No Data"; return; }
-
-    const fb=document.getElementById('feedback-area'); fb.innerText=currentMode==='speaking'?"Ready":"Listen & Select"; fb.className="feedback";
-    document.getElementById('next-btn-spk').style.display='none'; document.getElementById('next-btn-lst').style.display='none'; document.getElementById('rec-btn').style.display='block';
-    document.getElementById('replay-user-btn').style.display='none';
     
-    const container = document.querySelector('.container');
-    if(container) container.classList.remove('shake-anim','pop-anim');
-    document.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('success'));
-
-    const now = Date.now();
-    const dueItems = list.filter(item => !item.nextReview || item.nextReview <= now);
+    // 設定画面を閉じる (2_dom_events.js の関数)
+    if(typeof closeSettings === 'function') closeSettings();
     
-    if (dueItems.length > 0 && Math.random() > 0.3) {
-        currentPair = dueItems[Math.floor(Math.random() * dueItems.length)];
-    } else {
-        currentPair = list[Math.floor(Math.random() * list.length)];
+    // Geminiモデル更新
+    if(window.currentProvider === 'gemini' && kGemini && typeof fetchModels === 'function') {
+        fetchModels(true);
     }
+    
+    alert("Settings Saved!");
+};
 
-    isLTarget = Math.random() > 0.5; 
-    targetObj = isLTarget ? currentPair.l : currentPair.r;
-
-    const tEl=document.getElementById('target-word');
-    const opEl = document.getElementById('opponent-word');
-    const chL = document.getElementById('choice-l');
-    const chR = document.getElementById('choice-r');
-
-    if(currentMode==='listening'){
-        tEl.innerText="?????"; tEl.classList.add('blur');
-        if(chL) chL.innerText=currentPair.l.w; 
-        if(chR) chR.innerText=currentPair.r.w;
-        if(opEl) opEl.innerText="???";
-        setTimeout(speakModel,500);
-    }else{
-        tEl.innerText=targetObj.w; tEl.classList.remove('blur');
-        if(opEl) opEl.innerText=(isLTarget?currentPair.r:currentPair.l).w;
-        if(typeof renderPhonemes === 'function') renderPhonemes();
-        if(autoStart && typeof toggleRecord === 'function') setTimeout(toggleRecord,500);
-    }
-}
-
-function updateWordStats(isCorrect) {
-    if (!currentPair.streak) currentPair.streak = 0;
+// 単語統計更新ヘルパー (DB操作に近いのでここに配置、または 2_db_manager.js でも可)
+window.updateWordStats = function(isCorrect) {
+    if (!window.currentPair) return;
+    
+    if (!window.currentPair.streak) window.currentPair.streak = 0;
+    
     if (isCorrect) {
-        currentPair.streak += 1;
-        const bonusTime = 60 * 1000 * Math.pow(4, currentPair.streak); 
-        currentPair.nextReview = Date.now() + bonusTime;
+        window.currentPair.streak += 1;
+        // 正解数に応じて復習間隔を空ける (簡易的なSRSロジック)
+        const bonusTime = 60 * 1000 * Math.pow(4, window.currentPair.streak); 
+        window.currentPair.nextReview = Date.now() + bonusTime;
     } else {
-        currentPair.streak = 0;
-        currentPair.nextReview = Date.now();
+        window.currentPair.streak = 0;
+        window.currentPair.nextReview = Date.now();
     }
+    
+    // DB保存 (2_db_manager.js)
     if(typeof saveDb === 'function') saveDb();
-}
+};
 
-function updateStreakDisplay(){ 
-    const el = document.getElementById('streak-disp');
-    if(el) el.innerText=streak; 
-}
-function speakModel(){ const u=new SpeechSynthesisUtterance(targetObj.w); u.lang='en-US'; u.rate=speechRate; window.speechSynthesis.speak(u); }
-function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); }
+// モデル音声再生ヘルパー (1_audio_visuals.js にあるべきだが、単純なのでここでも可)
+window.speakModel = function() { 
+    if(!window.targetObj || !window.targetObj.w) return;
+    
+    // Web Speech API Synthesis
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // 前のをキャンセル
+        const u = new SpeechSynthesisUtterance(window.targetObj.w);
+        u.lang = 'en-US';
+        u.rate = window.speechRate || 0.8;
+        window.speechSynthesis.speak(u);
+    }
+};
