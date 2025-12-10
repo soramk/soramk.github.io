@@ -18,7 +18,7 @@ body.dark-mode {
 }
 
 body { 
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
     background: var(--bg); 
     color: var(--text); 
     /* iPhone Safe Area対応 */
@@ -69,11 +69,29 @@ body {
 .btn-icon:hover { background: rgba(128,128,128,0.2); }
 
 .sub-header { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; margin-bottom: 10px; }
+
+/* ▼▼▼ 修正箇所: モード切替ボタンのスタイル強化 ▼▼▼ */
 .mode-toggle button { 
-    padding: 6px 12px; border-radius: 16px; border: 1px solid rgba(128,128,128,0.3); 
-    background: transparent; color: var(--text); font-weight: bold; font-size: 0.8rem; cursor: pointer; 
+    padding: 6px 12px; 
+    border-radius: 16px; 
+    border: 1px solid rgba(128,128,128,0.3); 
+    background: transparent; 
+    color: var(--text); 
+    font-weight: bold; 
+    font-size: 0.8rem; 
+    cursor: pointer;
+    transition: background 0.3s, color 0.3s;
 }
-.mode-toggle button.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+/* activeクラスがついた時に強制的に色を変える */
+.mode-toggle button.active,
+#tab-speak.active,
+#tab-listen.active { 
+    background: var(--primary) !important; 
+    color: white !important; 
+    border-color: var(--primary) !important; 
+}
+/* ▲▲▲ 修正箇所ここまで ▲▲▲ */
 
 select { 
     padding: 6px; border-radius: 8px; background: rgba(128,128,128,0.1); 
@@ -198,12 +216,11 @@ button.action-btn {
 .modal-header h3 { margin: 0; }
 .btn-close { border: none; background: none; font-size: 1.5rem; color: var(--text); cursor: pointer; }
 
-/* --- Word List Manager Specific Layout (追加分) --- */
-/* モーダル内で2カラムレイアウトを実現するためのスタイル */
+/* --- Word List Manager Specific Layout --- */
 .modal-content.db-manager-layout {
     max-width: 900px;
     height: 80vh;
-    padding: 0; /* 内部レイアウトのためにパディングをリセット */
+    padding: 0;
     overflow: hidden;
 }
 
@@ -264,12 +281,4 @@ button.action-btn {
     .modal-body { flex-direction: column; }
     .sidebar { width: 100%; height: 150px; border-right: none; border-bottom: 1px solid var(--border); }
     .main-panel { padding: 10px; }
-}
-
-/* アクティブなタブの色を変えるスタイル */
-#tab-speak.active, #tab-listen.active {
-    background-color: #0ea5e9; /* ハイライト色 (水色) */
-    color: white;              /* 文字色 (白) */
-    border-color: #0ea5e9;
-    font-weight: bold;
 }
