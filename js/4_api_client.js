@@ -201,9 +201,7 @@ function startWebSpeech() {
     };
 
     webRecognition.onresult = (event) => {
-        // ★修正: 結果が出たら、まず録音（MediaRecorder）を停止させる
-        // これにより 5_app_flow.js 側の stopRecordingInternal -> mediaRecorder.stop が走り、
-        // 波形生成とリプレイボタンの有効化が行われる。
+        // 結果が出たら、まず録音（MediaRecorder）を停止させる
         if (typeof stopRecordingInternal === 'function') {
             stopRecordingInternal(); 
         }
@@ -230,6 +228,11 @@ function startWebSpeech() {
     };
 
     webRecognition.onerror = (event) => {
+        // ★修正: 結果取得後の停止処理による 'aborted' エラーは無視する
+        if (event.error === 'aborted') {
+            return;
+        }
+
         console.error("Web Speech Error:", event.error);
         
         const fb = document.getElementById('feedback-area');
@@ -239,14 +242,12 @@ function startWebSpeech() {
         if (typeof stopRecordingInternal === 'function') {
             stopRecordingInternal(); 
         } else {
-            // 万が一関数がない場合のフォールバック
             if(typeof isRecording !== 'undefined') window.isRecording = false;
             if(typeof updateRecordButtonUI === 'function') updateRecordButtonUI();
         }
     };
 
     webRecognition.onend = () => {
-        // stopRecordingInternal が呼ばれていればボタンは既にリセットされているはずだが、念のため
         if(typeof updateRecordButtonUI === 'function') updateRecordButtonUI();
         webRecognition = null;
     };

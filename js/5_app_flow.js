@@ -181,12 +181,10 @@ async function nextQuestion() {
         if(typeof toggleRecord === 'function') toggleRecord(); 
     }
     
-    // ★修正: 関数名修正 (stopWebSpeechNow -> stopWebSpeech)
     if (typeof stopWebSpeech === 'function') stopWebSpeech();
     
     if (typeof isRecording !== 'undefined') window.isRecording = false;
     
-    // ★修正: ボタンUIのリセット (6_dom_events.js)
     if (typeof updateRecordButtonUI === 'function') updateRecordButtonUI();
 
     // 2. UIのリセット
@@ -197,9 +195,12 @@ async function nextQuestion() {
     }
     const wordArea = document.getElementById('word-area');
     if(wordArea) wordArea.classList.remove('shake-anim', 'pop-anim');
-
-    const targetWordEl = document.getElementById('target-word');
-    if(targetWordEl) targetWordEl.classList.add('blur'); 
+    
+    // ボタンの成功/失敗色をリセット
+    const btnL = document.getElementById('choice-l');
+    const btnR = document.getElementById('choice-r');
+    if(btnL) btnL.classList.remove('success', 'error');
+    if(btnR) btnR.classList.remove('success', 'error');
 
     // 3. 次の単語データの取得
     if (typeof window.db === 'undefined' || !window.currentCategory || !window.db[window.currentCategory]) {
@@ -227,27 +228,43 @@ async function nextQuestion() {
         targetWord: window.targetObj.w
     });
 
-    // 4. 画面表示の更新
-    updateWordDisplay();
+    // 4. 画面表示の更新（モードによって分岐）
+    const targetEl = document.getElementById('target-word');
+    const opponentEl = document.getElementById('opponent-word');
     
-    // ★修正: 1_audio_visuals.js に追加した関数を呼び出す
+    // 発音記号と口の形の更新 (1_audio_visuals.js)
     if (typeof updatePhonemesAndMouth === 'function') {
         updatePhonemesAndMouth(window.currentPair, window.isTargetL);
     }
 
     // 5. モードごとの挙動設定
     if (window.currentMode === 'listening') {
-        // リスニングモード
+        // --- Listening Mode ---
+        
+        // ★修正1: 答えがわからないように完全に伏せ字にする（TargetもOpponentも）
+        if(targetEl) targetEl.innerText = "??????";
+        if(opponentEl) opponentEl.innerText = "??????";
+        if(targetEl) targetEl.classList.remove('blur'); // blurクラスではなく文字置換で対応
+
+        // ★修正2: 選択ボタンのラベルを「L/R」から「実際の単語」に変更
+        if(btnL) btnL.innerText = window.currentPair.l.w;
+        if(btnR) btnR.innerText = window.currentPair.r.w;
+
+        // 音声再生
         setTimeout(() => speakModel(), 300);
+        
         document.getElementById('controls-listening').style.display = 'grid';
         document.getElementById('controls-speaking').style.display = 'none';
-        if(targetWordEl) targetWordEl.classList.add('blur'); 
         
     } else {
-        // スピーキングモード
+        // --- Speaking Mode ---
+        
+        // 正解を表示
+        updateWordDisplay();
+        if(targetEl) targetEl.classList.remove('blur');
+
         document.getElementById('controls-listening').style.display = 'none';
         document.getElementById('controls-speaking').style.display = 'grid';
-        if(targetWordEl) targetWordEl.classList.remove('blur');
     }
 }
 
@@ -266,7 +283,7 @@ function updateWordDisplay() {
 }
 
 
-// --- Result Handling ---
+// --- Result Handling (Speaking) ---
 
 function handleError(e) {
     console.error(e);
@@ -274,7 +291,6 @@ function handleError(e) {
     const fb = document.getElementById('feedback-area');
     if(fb) fb.innerText = "Error: "+ msg;
     
-    // ★修正: 録音ボタンのUIリセット
     if (typeof updateRecordButtonUI === 'function') updateRecordButtonUI();
     isRecording = false;
 }
@@ -287,9 +303,7 @@ function handleResult(result) {
     const autoFlow = document.getElementById('toggle-auto-flow').checked;
     const cont = document.querySelector('.container');
     
-    // ★修正: UI更新関数へ委譲
     if (typeof updateRecordButtonUI === 'function') updateRecordButtonUI();
-    // 録音完了なのでボタンは非表示（または正解時のみ非表示）
     const btn = document.getElementById('rec-btn');
     if(btn) btn.style.display = isOk ? 'none' : 'block';
 
@@ -353,7 +367,6 @@ function checkPronunciation(result) {
 function checkListening(userChoseL){
     // userChoseL: true=ユーザーがLを選択, false=ユーザーがRを選択
 
-    // ★修正: window.isTargetL を参照して正解を取得
     let correctIsL = window.isTargetL;
     
     if (typeof correctIsL === 'undefined') {
@@ -369,17 +382,15 @@ function checkListening(userChoseL){
     const autoFlow = document.getElementById('toggle-auto-flow').checked;
     const cont = document.querySelector('.container');
     
-    // 正解の単語を表示（ぼかし解除）
-    const targetEl = document.getElementById('target-word');
-    if(targetEl) {
-        targetEl.classList.remove('blur');
-        if(typeof window.targetObj !== 'undefined') targetEl.innerText = window.targetObj.w; 
-    }
+    // ★修正3: 判定後に正解の単語を表示する（??????を解除）
+    updateWordDisplay();
     
     if(typeof updateWordStats === 'function') updateWordStats(isCorrect);
     
-    const targetText = targetEl ? targetEl.innerText : "???";
-    addToHistory(targetText, userChoseL?"Selected L":"Selected R", isCorrect);
+    // 履歴には正解の単語を表示
+    const targetText = window.targetObj.w;
+    const choiceText = userChoseL ? window.currentPair.l.w : window.currentPair.r.w;
+    addToHistory(targetText, `Selected: ${choiceText}`, isCorrect);
     
     if(isCorrect){
         if(typeof sfx !== 'undefined') sfx.correct(); 
@@ -416,6 +427,11 @@ function checkListening(userChoseL){
         }
         if(typeof streak !== 'undefined') streak = 0;
         
+        // 間違えたボタンを赤く
+        const btnId = userChoseL ? 'choice-l' : 'choice-r';
+        const btn = document.getElementById(btnId);
+        if(btn) btn.classList.add('error');
+
         const nextBtn = document.getElementById('next-btn-lst');
         if(nextBtn) nextBtn.style.display = 'grid';
     }
@@ -436,7 +452,7 @@ function addToHistory(target, heard, isOk){
     if(!list) return;
     const li = document.createElement('li');
     li.className = 'history-item';
-    li.innerHTML = `<span class="${isOk?'res-ok':'res-ng'}">${isOk?'OK':'NG'}</span> <span>Target: ${target} / AI: ${heard}</span>`;
+    li.innerHTML = `<span class="${isOk?'res-ok':'res-ng'}">${isOk?'OK':'NG'}</span> <span>Target: ${target} / ${heard}</span>`;
     list.prepend(li);
 }
 
