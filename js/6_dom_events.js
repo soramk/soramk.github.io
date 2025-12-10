@@ -119,33 +119,32 @@ function updateRecordButtonUI() {
 
 // ★追加: モード切替（Listen / Speak）の制御
 function setMode(mode) {
-    console.log("Mode switched to:", mode);
-
-    // 1. グローバル変数を更新 (3_core_logic.js)
+    // 1. グローバル変数を更新
     if (typeof window.currentMode !== 'undefined') {
         window.currentMode = mode;
     }
 
-    // 2. タブの見た目（色）の切り替え
+    // 2. タブの要素を取得
     const tabSpeak = document.getElementById('tab-speak');
     const tabListen = document.getElementById('tab-listen');
     
+    // 3. 要素があればクラスを付け替え
     if (tabSpeak && tabListen) {
-        // 一旦両方からactiveを外してリセット
+        // 一旦両方の active を外す
         tabSpeak.classList.remove('active');
         tabListen.classList.remove('active');
 
-        // 選択されたモードのボタンにactiveクラス（色）を付与
+        // モードに応じて active を付ける
         if (mode === 'speaking') {
             tabSpeak.classList.add('active');
         } else {
             tabListen.classList.add('active');
         }
     } else {
-        console.warn("Tabs not found. Check HTML IDs: 'tab-speak', 'tab-listen'");
+        console.warn("Tabs not found. Check HTML IDs: 'tab-speak' & 'tab-listen'");
     }
 
-    // 3. 画面（問題）を再描画してモード変更を反映
+    // 4. 画面を更新
     if (typeof nextQuestion === 'function') {
         nextQuestion();
     }

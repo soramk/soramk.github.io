@@ -265,3 +265,11 @@ button.action-btn {
     .sidebar { width: 100%; height: 150px; border-right: none; border-bottom: 1px solid var(--border); }
     .main-panel { padding: 10px; }
 }
+
+/* アクティブなタブの色を変えるスタイル */
+#tab-speak.active, #tab-listen.active {
+    background-color: #0ea5e9; /* ハイライト色 (水色) */
+    color: white;              /* 文字色 (白) */
+    border-color: #0ea5e9;
+    font-weight: bold;
+}
