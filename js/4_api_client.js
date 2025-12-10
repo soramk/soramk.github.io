@@ -1,4 +1,54 @@
+/**
+ * 4_api_client.js
+ * Gemini, OpenAI, Web Speech API との通信ロジック
+ */
+
+// --- 共通ヘルパー: 結果処理のブリッジ ---
+// ユーザーコードの checkPronunciation を アプリ側の handleResult に繋ぐ
+function checkPronunciation(result) {
+    if (typeof handleResult === 'function') {
+        handleResult({
+            transcript: result.heard || result.transcript, // 表記ゆれ吸収
+            isCorrect: result.correct || result.isCorrect,
+            advice: result.advice
+        });
+    } else {
+        console.log("Result:", result);
+    }
+}
+
+// エラーハンドリングのブリッジ
+function handleError(e) {
+    console.error(e);
+    const fb = document.getElementById('feedback-area');
+    if (fb) fb.innerText = "Error: " + (e.message || e);
+    
+    // 録音UIのリセット
+    if (typeof updateRecordButtonUI === 'function') {
+        // グローバルのisRecordingをfalseにしてUI更新
+        window.isRecording = false; 
+        updateRecordButtonUI();
+    }
+}
+
+// 共通エントリポイント: アプリ側(5_app_flow.js)からはこれを呼ぶ
+async function sendToAI(audioBlob) {
+    const provider = document.getElementById('ai-provider').value;
+    const mimeType = 'audio/webm'; // 録音形式に合わせる
+
+    if (provider === 'gemini') {
+        await sendToGemini(audioBlob, mimeType);
+    } else if (provider === 'openai') {
+        await sendToOpenAI(audioBlob, mimeType);
+    } else if (provider === 'web') {
+        // webモードは通常 startWebSpeech が直接呼ばれるが、念のため
+        startWebSpeech(); 
+    }
+}
+
+
 // --- 1. Gemini Implementation ---
+
 async function fetchModels(silent=false) {
     const k = document.getElementById('api-key-gemini').value;
     const sel = document.getElementById('model-select');
@@ -15,8 +65,15 @@ async function fetchModels(silent=false) {
 }
 
 async function sendToGemini(blob, mime) {
+    // グローバル変数からターゲット情報を取得
+    const isL = (typeof isTargetL !== 'undefined') ? isTargetL : true;
+    const current = (typeof currentPair !== 'undefined') ? currentPair : {l:{w:'test'}, r:{w:'test'}};
+    const targetObj = isL ? current.l : current.r;
+
     const k=document.getElementById('api-key-gemini').value;
     const m=document.getElementById('model-select').value || 'gemini-1.5-flash';
+    
+    // Blob to Base64
     const b64=await new Promise(r=>{const fr=new FileReader(); fr.onloadend=()=>r(fr.result.split(',')[1]); fr.readAsDataURL(blob);});
     
     const url=`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${k}`;
@@ -25,7 +82,7 @@ async function sendToGemini(blob, mime) {
     Input: Audio of a user trying to pronounce the English word "${targetObj.w}".
     Task:
     1. Identify the heard word.
-    2. Compare it with the target "${targetObj.w}" and the distractor "${(isLTarget?currentPair.r:currentPair.l).w}".
+    2. Compare it with the target "${targetObj.w}" and the distractor "${(isL?current.r:current.l).w}".
     3. If incorrect, provide a 1-sentence advice IN JAPANESE (日本語) about tongue position or lips.
     
     Output Format (JSON Only):
@@ -47,16 +104,25 @@ async function sendToGemini(blob, mime) {
         if(d.error) throw new Error(d.error.message);
         
         let rawText = d.candidates[0].content.parts[0].text;
-        const result = JSON.parse(rawText);
-        if(typeof checkPronunciation === 'function') checkPronunciation(result); 
+        // JSON部分だけ抽出（Markdown対策）
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        const result = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(rawText);
+        
+        checkPronunciation(result); 
     }catch(e){ 
-        if(typeof handleError === 'function') handleError(e); 
-        else alert(e.message);
+        handleError(e); 
     }
 }
 
+
 // --- 2. OpenAI Implementation ---
+
 async function sendToOpenAI(blob, mime) {
+    // グローバル変数からターゲット情報を取得
+    const isL = (typeof isTargetL !== 'undefined') ? isTargetL : true;
+    const current = (typeof currentPair !== 'undefined') ? currentPair : {l:{w:'test'}, r:{w:'test'}};
+    const targetObj = isL ? current.l : current.r;
+
     const k = document.getElementById('api-key-openai').value;
     if(!k) { alert("OpenAI Key missing"); return; }
     
@@ -79,14 +145,14 @@ async function sendToOpenAI(blob, mime) {
         
         const target = targetObj.w.toLowerCase();
         if(heardWord.includes(target)) {
-            if(typeof checkPronunciation === 'function') checkPronunciation({ heard: heardWord, correct: true, advice: "" });
+            checkPronunciation({ heard: heardWord, correct: true, advice: "" });
             return;
         }
 
         const prompt = `
         User said: "${heardWord}"
         Target was: "${targetObj.w}"
-        Distractor was: "${(isLTarget?currentPair.r:currentPair.l).w}"
+        Distractor was: "${(isL?current.r:current.l).w}"
         The user pronunciation seems incorrect.
         Provide a very brief 1-sentence advice in JAPANESE about how to fix the pronunciation.
         Format: Just the Japanese string.
@@ -107,18 +173,23 @@ async function sendToOpenAI(blob, mime) {
         const chatData = await chatRes.json();
         const advice = chatData.choices[0].message.content;
 
-        if(typeof checkPronunciation === 'function') checkPronunciation({ heard: heardWord, correct: false, advice: advice });
+        checkPronunciation({ heard: heardWord, correct: false, advice: advice });
 
     } catch(e) { 
-        if(typeof handleError === 'function') handleError(e);
-        else alert(e.message);
+        handleError(e);
     }
 }
 
-// --- 3. Web Speech API Implementation (Logic Only) ---
+
+// --- 3. Web Speech API Implementation ---
 let webRecognition = null;
 
 function startWebSpeech() {
+    // グローバル変数からターゲット情報を取得
+    const isL = (typeof isTargetL !== 'undefined') ? isTargetL : true;
+    const current = (typeof currentPair !== 'undefined') ? currentPair : {l:{w:'test'}, r:{w:'test'}};
+    const targetObj = isL ? current.l : current.r;
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SpeechRecognition) { alert("Web Speech API not supported."); return; }
 
@@ -135,20 +206,22 @@ function startWebSpeech() {
     webRecognition.onstart = () => {
         const fb = document.getElementById('feedback-area');
         if(fb) fb.innerText = "Listening (Browser)...";
-        if(sfx && sfx.start) sfx.start();
+        // SFX再生 (1_audio_visuals.jsで定義されていれば)
+        if(typeof sfx !== 'undefined' && sfx.start) sfx.start();
     };
 
     webRecognition.onresult = (event) => {
         // 録音停止済みなら結果を無視
-        if (!isRecording) return;
+        if (typeof isRecording !== 'undefined' && !isRecording) return;
 
         const heard = event.results[0][0].transcript.toLowerCase();
         const target = targetObj.w.toLowerCase();
-        const distractor = (isLTarget?currentPair.r:currentPair.l).w.toLowerCase();
+        const distractor = (isL?current.r:current.l).w.toLowerCase();
         
         let isOk = false;
         let advice = "";
 
+        // 簡易判定: ターゲット単語が含まれているか
         if(heard.split(/[\s\.\?!]+/).includes(target)) {
             isOk = true;
         } else {
@@ -160,59 +233,46 @@ function startWebSpeech() {
             }
         }
         
-        if(typeof checkPronunciation === 'function') {
-            checkPronunciation({ heard: heard, correct: isOk, advice: advice });
-        }
+        // UI側の録音状態を解除
+        if(typeof isRecording !== 'undefined') window.isRecording = false;
+        if(typeof updateRecordButtonUI === 'function') updateRecordButtonUI();
+
+        checkPronunciation({ heard: heard, correct: isOk, advice: advice });
     };
 
     webRecognition.onerror = (event) => {
         console.error("Web Speech Error:", event.error);
         
-        // エラー表示
         const fb = document.getElementById('feedback-area');
         if(fb) fb.innerText = "Error: " + event.error;
 
-        // UIの強制リセット
-        const btn = document.getElementById('rec-btn');
-        if(btn) {
-            btn.classList.remove('processing');
-            btn.classList.remove('recording');
-            btn.innerText = "🎤 Start";
-            btn.style.display = 'block';
-        }
-        
-        // フラグのリセット
-        isRecording = false; 
+        // エラー時は強制的に録音終了
+        if(typeof isRecording !== 'undefined') window.isRecording = false;
+        if(typeof updateRecordButtonUI === 'function') updateRecordButtonUI();
     };
 
     webRecognition.onend = () => {
-        // 正常終了時にボタンがまだ戻っていなければ戻す
-        const btn = document.getElementById('rec-btn');
-        if(btn && (btn.classList.contains('processing') || btn.classList.contains('recording'))) {
-            btn.classList.remove('processing');
-            btn.classList.remove('recording');
-            btn.innerText = "🎤 Start";
-            btn.style.display = 'block';
-        }
+        // 通常は onresult -> isRecording=false でボタンは戻るが、
+        // 無音終了などの場合に備えてボタンをリセット
+        if(typeof updateRecordButtonUI === 'function') updateRecordButtonUI();
+        
+        // インスタンス破棄
+        webRecognition = null;
     };
 
     try {
         webRecognition.start();
     } catch(e) {
         console.error("Start Failed", e);
-        const btn = document.getElementById('rec-btn');
-        if(btn) {
-            btn.classList.remove('recording');
-            btn.innerText = "🎤 Start";
-        }
+        if(typeof updateRecordButtonUI === 'function') updateRecordButtonUI();
     }
 }
 
 function stopWebSpeech() {
     if(webRecognition) {
         try { 
-            // 停止要求
-            webRecognition.stop(); 
+            webRecognition.abort(); // stop()よりabort()の方が即時性が高い
         } catch(e){}
+        webRecognition = null;
     }
 }

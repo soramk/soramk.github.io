@@ -1,20 +1,34 @@
-// Note: Globals (mediaRecorder, audioCtx, etc.) are defined in 3_core_logic.js.
+/**
+ * 5_app_flow.js
+ * アプリケーションのメインフロー制御 (録音、判定、画面遷移)
+ * Note: Globals (mediaRecorder, audioCtx, etc.) are defined in 3_core_logic.js.
+ */
 
 // --- Recording Flow ---
+
 async function toggleRecord() {
     const btn = document.getElementById('rec-btn');
+    const currentProvider = document.getElementById('ai-provider').value;
 
-    // ■ 録音停止処理
-    if (isRecording) {
+    // ■ 録音停止処理 (既に録音中の場合)
+    if (typeof isRecording !== 'undefined' && isRecording) {
         stopRecordingInternal();
         return;
     }
 
-    // キーチェック
+    // APIキーチェック
     const kGemini = document.getElementById('api-key-gemini').value;
     const kOpenAI = document.getElementById('api-key-openai').value;
-    if(currentProvider === 'gemini' && !kGemini) { openSettings(); return; }
-    if(currentProvider === 'openai' && !kOpenAI) { openSettings(); return; }
+    if(currentProvider === 'gemini' && !kGemini) { 
+        alert("Gemini API Key is missing. Please check settings."); 
+        openSettings(); 
+        return; 
+    }
+    if(currentProvider === 'openai' && !kOpenAI) { 
+        alert("OpenAI API Key is missing. Please check settings."); 
+        openSettings(); 
+        return; 
+    }
 
     try {
         // UI初期化
@@ -30,17 +44,17 @@ async function toggleRecord() {
         let stream = null;
         try {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            currentStream = stream; 
+            currentStream = stream; // グローバル変数に保持
         } catch(err) {
             console.warn("Mic access failed:", err);
-            alert("マイクへのアクセスが拒否されました。");
+            alert("マイクへのアクセスが拒否されました。設定を確認してください。\nMic access denied.");
             isRecording = false;
             btn.classList.remove('recording');
             btn.innerText = "🎤 Start";
             return;
         }
 
-        // 2. ビジュアライザー起動
+        // 2. ビジュアライザー起動 (1_audio_visuals.js)
         if(typeof startAudioVisualization === 'function') {
             startAudioVisualization(stream);
         }
@@ -53,16 +67,23 @@ async function toggleRecord() {
         mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
         audioChunks = [];
         
-        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.ondataavailable = e => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+        };
         
         // 録音停止時の処理（共通）
         mediaRecorder.onstop = async () => { 
             // マイク停止
-            if(currentStream) currentStream.getTracks().forEach(t => t.stop()); 
+            if(currentStream) {
+                currentStream.getTracks().forEach(t => t.stop()); 
+                currentStream = null;
+            }
             
             const blob = new Blob(audioChunks, { type: mime }); 
-            userAudioBlob = blob; 
-            document.getElementById('replay-user-btn').style.display = 'block';
+            userAudioBlob = blob; // グローバル変数に保持（再生用）
+            
+            const replayBtn = document.getElementById('replay-user-btn');
+            if(replayBtn) replayBtn.style.display = 'block';
 
             // 静的波形生成 (録音データから)
             if(audioCtx) {
@@ -74,12 +95,11 @@ async function toggleRecord() {
             }
 
             // ★ API分岐: Web Speech以外の場合のみ、ここでAPIに送信
-            // (Web Speechの場合は、音声認識側で勝手に判定が進むのでここでは何もしない)
+            // (Web Speechの場合は、4_api_client.js側で音声認識が進むのでここでは何もしない)
             if (currentProvider !== 'web') {
-                if(currentProvider === 'openai') {
-                    if(typeof sendToOpenAI === 'function') sendToOpenAI(blob, mime);
-                } else {
-                    if(typeof sendToGemini === 'function') sendToGemini(blob, mime); 
+                if(typeof sendToAI === 'function') {
+                    // 4_api_client.js の統合関数を呼ぶ
+                    sendToAI(blob);
                 }
             }
         };
@@ -105,7 +125,9 @@ async function toggleRecord() {
     }
 }
 
+// 内部用停止関数
 function stopRecordingInternal() {
+    const currentProvider = document.getElementById('ai-provider').value;
     isRecording = false; // 先にフラグを下げる
     
     const btn = document.getElementById('rec-btn');
@@ -126,7 +148,7 @@ function stopRecordingInternal() {
                 b.classList.remove('processing');
                 b.innerText = "🎤 Start";
             }
-        }, 800);
+        }, 1000);
     }
     
     // MediaRecorder停止 (これが onstop を発火させ、波形生成を行う)
@@ -141,80 +163,203 @@ function stopRecordingInternal() {
     }
 }
 
+// スキップ処理
 function skipQuestion() {
-    if(isRecording) { stopRecordingInternal(); }
-    sfx.skip(); streak=0; updateStreakDisplay(); nextQuestion();
+    // 録音中なら止める
+    if(typeof isRecording !== 'undefined' && isRecording) { 
+        stopRecordingInternal(); 
+    }
+    
+    // SFXスキップ音 (あれば)
+    if(typeof sfx !== 'undefined' && sfx.skip) sfx.skip();
+    
+    // ストリークリセット
+    if(typeof streak !== 'undefined') streak = 0;
+    updateStreakDisplay();
+    
+    // 次へ
+    nextQuestion();
 }
+
 
 // --- Result Handling & UI Updates ---
 
+// エラーハンドリング (4_api_client.jsからも呼ばれる想定)
 function handleError(e) {
     console.error(e);
     const msg = e.message || e;
-    document.getElementById('feedback-area').innerText="Error: "+ msg;
+    const fb = document.getElementById('feedback-area');
+    if(fb) fb.innerText = "Error: "+ msg;
+    
     const btn = document.getElementById('rec-btn');
     if(btn) {
         btn.classList.remove('processing');
         btn.classList.remove('recording');
-        btn.innerText="🎤 Start";
+        btn.innerText = "🎤 Start";
         btn.style.display = 'block';
     }
+    
+    // フラグ安全リセット
+    isRecording = false;
 }
 
-function checkPronunciation(aiResult) {
-    const inp = aiResult.heard.toLowerCase();
-    const isOk = aiResult.correct; 
-    
-    const fb=document.getElementById('feedback-area');
-    const auto=document.getElementById('toggle-auto-flow').checked;
-    const cont=document.querySelector('.container');
-    
-    const btn=document.getElementById('rec-btn');
-    // 結果が出たらボタンをリセット
-    btn.classList.remove('processing'); 
-    btn.classList.remove('recording'); 
-    btn.innerText="🎤 Start";
-    btn.style.display='none'; 
+// 判定結果のUI反映 (4_api_client.js から checkPronunciation -> handleResult 経由で呼ばれる)
+// ※ 4_api_client.js の修正版では handleResult を呼ぶようになっているため、
+//    整合性を取るために handleResult を定義し、checkPronunciation はそのエイリアスまたはラッパーとします。
 
-    updateWordStats(isOk); 
-    addToHistory(targetObj.w, inp, isOk);
+function handleResult(result) {
+    // result = { transcript: "...", isCorrect: true/false, advice: "..." }
+
+    const inp = result.transcript;
+    const isOk = result.isCorrect; 
+    
+    const fb = document.getElementById('feedback-area');
+    const autoFlow = document.getElementById('toggle-auto-flow').checked;
+    const cont = document.querySelector('.container'); // アニメーション用
+    
+    const btn = document.getElementById('rec-btn');
+    if(btn) {
+        // 結果が出たらボタンをリセット
+        btn.classList.remove('processing'); 
+        btn.classList.remove('recording'); 
+        btn.innerText = "🎤 Start";
+        // 正解したら「次へ」ボタンが出るのでStartボタンは隠す、不正解なら再挑戦用に残す
+        btn.style.display = isOk ? 'none' : 'block'; 
+    }
+
+    // 統計更新 (3_core_logic.js等にある想定)
+    if(typeof updateWordStats === 'function') updateWordStats(isOk); 
+    
+    // 履歴追加
+    const targetText = document.getElementById('target-word').innerText;
+    addToHistory(targetText, inp, isOk);
 
     if(isOk){
-        sfx.correct(); cont.classList.add('pop-anim');
-        fb.innerHTML=`🎉 Correct!<br><small style="color:var(--text); opacity:0.8;">Heard: "${inp}"</small>`; 
-        fb.className="feedback correct";
-        streak++; 
-        if(auto) setTimeout(()=>nextQuestion(true),1500); else document.getElementById('next-btn-spk').style.display='block';
-    }else{
-        sfx.wrong(); cont.classList.add('shake-anim');
-        const adviceText = aiResult.advice || "Try again!";
-        fb.innerHTML=`⚠️ ${inp}<br><small style="font-size:0.8rem; color:var(--text); font-weight:bold;">💡 ${adviceText}</small>`; 
-        fb.className="feedback incorrect"; streak=0;
-        btn.style.display='block'; // 再挑戦ボタン表示
+        // 正解時
+        if(typeof sfx !== 'undefined') sfx.correct(); 
+        if(cont) {
+            cont.classList.remove('shake-anim');
+            cont.classList.add('pop-anim');
+            setTimeout(()=>cont.classList.remove('pop-anim'), 500);
+        }
+
+        if(fb) {
+            fb.innerHTML = `🎉 Correct!<br><small style="color:var(--text); opacity:0.8;">Heard: "${inp}"</small>`; 
+            fb.className = "feedback correct";
+        }
+        
+        if(typeof streak !== 'undefined') streak++; 
+        
+        // Auto Next判定
+        if(autoFlow) {
+            setTimeout(() => nextQuestion(), 1500);
+        } else {
+            const nextBtn = document.getElementById('next-btn-spk');
+            if(nextBtn) nextBtn.style.display = 'block';
+        }
+    } else {
+        // 不正解時
+        if(typeof sfx !== 'undefined') sfx.wrong(); 
+        if(cont) {
+            cont.classList.remove('pop-anim');
+            cont.classList.add('shake-anim');
+            setTimeout(()=>cont.classList.remove('shake-anim'), 500);
+        }
+
+        const adviceText = result.advice || "Try again!";
+        if(fb) {
+            fb.innerHTML = `⚠️ ${inp}<br><small style="font-size:0.8rem; color:var(--text); font-weight:bold;">💡 ${adviceText}</small>`; 
+            fb.className = "feedback incorrect";
+        }
+        
+        if(typeof streak !== 'undefined') streak = 0;
+    }
+    
+    updateStreakDisplay();
+}
+
+// 旧コード互換用 (4_api_client.jsの一部がまだこれを呼んでいる場合用)
+function checkPronunciation(result) {
+    handleResult({
+        transcript: result.heard || result.transcript,
+        isCorrect: result.correct || result.isCorrect,
+        advice: result.advice
+    });
+}
+
+
+// --- Listening Mode ---
+
+function checkListening(uL){
+    // リスニングモード: ユーザーがLかRかボタンを押した時の判定
+    // uL: trueならLボタン、falseならRボタン
+    
+    const isLTargetGlobal = (typeof isTargetL !== 'undefined') ? isTargetL : true;
+    const correct = (isLTargetGlobal && uL) || (!isLTargetGlobal && !uL);
+    
+    const fb = document.getElementById('feedback-area');
+    const autoFlow = document.getElementById('toggle-auto-flow').checked;
+    const cont = document.querySelector('.container');
+    
+    // 正解の単語を表示（ぼかし解除）
+    const targetEl = document.getElementById('target-word');
+    const opponentEl = document.getElementById('opponent-word');
+    if(targetEl) {
+        targetEl.classList.remove('blur');
+        // 念のためテキスト再セット (targetObjはグローバル想定)
+        if(typeof targetObj !== 'undefined') targetEl.innerText = targetObj.w; 
+    }
+    
+    // 統計更新
+    if(typeof updateWordStats === 'function') updateWordStats(correct);
+    
+    // 履歴
+    const targetText = targetEl ? targetEl.innerText : "???";
+    addToHistory(targetText, uL?"Selected L":"Selected R", correct);
+    
+    if(correct){
+        if(typeof sfx !== 'undefined') sfx.correct(); 
+        if(cont) {
+            cont.classList.add('pop-anim');
+            setTimeout(()=>cont.classList.remove('pop-anim'), 500);
+        }
+        if(fb) {
+            fb.innerHTML = "🎉 Correct!"; 
+            fb.className = "feedback correct";
+        }
+        if(typeof streak !== 'undefined') streak++;
+        
+        // 選択ボタンの色付け
+        const btnId = uL ? 'choice-l' : 'choice-r';
+        const btn = document.getElementById(btnId);
+        if(btn) btn.classList.add('success');
+
+        if(autoFlow) {
+            setTimeout(()=>nextQuestion(), 1200);
+        } else {
+            const nextBtn = document.getElementById('next-btn-lst');
+            if(nextBtn) nextBtn.style.display = 'grid'; // または block
+        }
+    } else {
+        if(typeof sfx !== 'undefined') sfx.wrong(); 
+        if(cont) {
+            cont.classList.add('shake-anim');
+            setTimeout(()=>cont.classList.remove('shake-anim'), 500);
+        }
+        if(fb) {
+            fb.innerHTML = "😢 Wrong..."; 
+            fb.className = "feedback incorrect";
+        }
+        if(typeof streak !== 'undefined') streak = 0;
+        
+        const nextBtn = document.getElementById('next-btn-lst');
+        if(nextBtn) nextBtn.style.display = 'grid';
     }
     updateStreakDisplay();
 }
 
-function checkListening(uL){
-    const correct=(isLTarget&&uL)||(!isLTarget&&!uL), fb=document.getElementById('feedback-area'), auto=document.getElementById('toggle-auto-flow').checked;
-    const cont=document.querySelector('.container');
-    document.getElementById('target-word').innerText=targetObj.w; document.getElementById('target-word').classList.remove('blur');
-    document.getElementById('opponent-word').innerText=(isLTarget?currentPair.r:currentPair.l).w;
-    
-    updateWordStats(correct);
-    addToHistory(targetObj.w, uL?"Selected L":"Selected R", correct);
-    
-    if(correct){
-        sfx.correct(); cont.classList.add('pop-anim');
-        fb.innerHTML="🎉 Correct!"; fb.className="feedback correct"; streak++;
-        document.getElementById(uL?'choice-l':'choice-r').classList.add('success');
-        if(auto) setTimeout(()=>nextQuestion(),1200); else document.getElementById('next-btn-lst').style.display='grid';
-    }else{
-        sfx.wrong(); cont.classList.add('shake-anim');
-        fb.innerHTML="😢 Wrong..."; fb.className="feedback incorrect"; streak=0; document.getElementById('next-btn-lst').style.display='grid';
-    }
-    updateStreakDisplay();
-}
+
+// --- Utils ---
 
 function replayUserAudio() {
     if(!userAudioBlob) return;
@@ -223,7 +368,19 @@ function replayUserAudio() {
     audio.play();
 }
 
-function addToHistory(t,h,ok){
-    const l=document.getElementById('history-list');
-    l.innerHTML=`<li class="history-item"><span class="${ok?'res-ok':'res-ng'}">${ok?'OK':'NG'}</span><span>Target: ${t} / AI: ${h}</span></li>`+l.innerHTML;
+function addToHistory(target, heard, isOk){
+    const list = document.getElementById('history-list');
+    if(!list) return;
+    
+    const li = document.createElement('li');
+    li.className = 'history-item';
+    li.innerHTML = `<span class="${isOk?'res-ok':'res-ng'}">${isOk?'OK':'NG'}</span> <span>Target: ${target} / AI: ${heard}</span>`;
+    
+    // 先頭に追加
+    list.prepend(li);
+}
+
+function updateStreakDisplay() {
+    const el = document.getElementById('streak-disp');
+    if(el && typeof streak !== 'undefined') el.innerText = streak;
 }
