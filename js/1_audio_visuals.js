@@ -90,7 +90,6 @@ function initCanvas(){
     }
 }
 
-// ★ 修正: マイクストリームを受け取り、AudioContextをセットアップ
 function startAudioVisualization(stream) {
     if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -156,7 +155,7 @@ function updateVisExplanation() {
     }
 }
 
-// ★ Visualize Loop
+// Visualize Loop
 function visualize(){
     if(!isRecording) return;
     requestAnimationFrame(visualize);
@@ -275,16 +274,44 @@ function renderStaticResult(buffer) {
     }
 }
 
+// --- Phoneme & Mouth Logic (修正・追加) ---
+
 function renderPhonemes() {
     const div=document.getElementById('phoneme-list');
     if(!div) return;
     div.innerHTML="";
-    if(!targetObj.b) return;
-    targetObj.b.forEach((ph,i)=>{
+    
+    // ★修正: window.targetObj を明示的に参照
+    const currentTarget = window.targetObj;
+    if(!currentTarget || !currentTarget.b) return;
+
+    currentTarget.b.forEach((ph,i)=>{
         const b=document.createElement('div'); b.className='phoneme-btn'; b.innerText=`/${ph.p}/`;
         b.onclick=()=>showDiagram(ph.t,b); div.appendChild(b);
         if(i===0) setTimeout(()=>b.click(),10);
     });
+}
+
+// ★追加: 5_app_flow.js の nextQuestion から呼ばれる
+function updatePhonemesAndMouth(pair, isTargetL) {
+    // データ整合性のために再描画
+    renderPhonemes();
+    
+    // 口の形のリセット、または最初の音素の表示
+    const titleEl = document.getElementById('diagram-title');
+    const descEl = document.getElementById('diagram-desc');
+    const svgEl = document.getElementById('diagram-svg');
+    
+    // 一旦リセット
+    if(titleEl) titleEl.innerHTML = "Ready";
+    if(descEl) descEl.innerText = "Select a phoneme above";
+    if(svgEl) svgEl.innerHTML = `<svg viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg">${visemes.silence.p}</svg>`;
+    
+    // ターゲット単語に発音データがない場合の処理
+    const target = isTargetL ? pair.l : pair.r;
+    if (!target.b || target.b.length === 0) {
+        if(descEl) descEl.innerText = "No animation data for this word.";
+    }
 }
 
 function showDiagram(type,btn) {

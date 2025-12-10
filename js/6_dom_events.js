@@ -1,5 +1,5 @@
 /**
- * 2_dom_events.js
+ * 6_dom_events.js
  * ボタンクリックや画面操作などのイベントハンドリングを集約します。
  * HTML側の onclick="..." から呼ばれる関数はここで定義します。
  */
@@ -107,19 +107,47 @@ function changeCategory() {
     if (!select) return;
     
     // グローバル変数 currentCategory を更新 (3_core_logic.js等で定義想定)
-    if (typeof currentCategory !== 'undefined') {
+    if (typeof window.currentCategory !== 'undefined') {
         window.currentCategory = select.value;
     }
     
     // 新しいカテゴリで問題をロード
-    if (typeof loadQuestion === 'function') loadQuestion();
+    // ★修正: loadQuestion ではなく nextQuestion を呼ぶ
+    if (typeof nextQuestion === 'function') {
+        nextQuestion();
+    } else {
+        console.error("nextQuestion function is missing!");
+    }
+}
+
+// ★追加: 録音ボタンの見た目を「待機状態」に戻す関数
+// (4_api_client.js や 5_app_flow.js から呼ばれる)
+function updateRecordButtonUI() {
+    const btn = document.getElementById('rec-btn');
+    if (!btn) return;
+
+    // isRecordingフラグを見て状態を反映（安全策）
+    if (typeof window.isRecording !== 'undefined' && window.isRecording) {
+        // 録音中ならストップボタン化（通常ここに来ることは稀だが整合性のため）
+        btn.classList.add('recording');
+        btn.innerText = "■ Stop";
+    } else {
+        // 待機状態
+        btn.classList.remove('recording');
+        btn.classList.remove('processing');
+        btn.innerText = "🎤 Start";
+        btn.style.display = 'block'; // 非表示になっていたら戻す
+    }
 }
 
 // キーボードショートカット対応 (PC用)
 document.addEventListener('keydown', (e) => {
     // モーダルが開いているときは無効化
-    if (document.getElementById('db-manager-modal').style.display === 'flex') return;
-    if (document.getElementById('settings-modal').style.display === 'flex') return;
+    const dbModal = document.getElementById('db-manager-modal');
+    const setModal = document.getElementById('settings-modal');
+
+    if (dbModal && dbModal.style.display === 'flex') return;
+    if (setModal && setModal.style.display === 'flex') return;
 
     if (e.code === 'Space') {
         e.preventDefault(); // スクロール防止

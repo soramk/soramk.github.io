@@ -180,8 +180,13 @@ async function nextQuestion() {
     if (typeof isRecording !== 'undefined' && isRecording) {
         if(typeof toggleRecord === 'function') toggleRecord(); 
     }
-    if (typeof stopWebSpeechNow === 'function') stopWebSpeechNow();
-    if (typeof isRecording !== 'undefined') isRecording = false;
+    
+    // ★修正: 関数名修正 (stopWebSpeechNow -> stopWebSpeech)
+    if (typeof stopWebSpeech === 'function') stopWebSpeech();
+    
+    if (typeof isRecording !== 'undefined') window.isRecording = false;
+    
+    // ★修正: ボタンUIのリセット (6_dom_events.js)
     if (typeof updateRecordButtonUI === 'function') updateRecordButtonUI();
 
     // 2. UIのリセット
@@ -197,7 +202,6 @@ async function nextQuestion() {
     if(targetWordEl) targetWordEl.classList.add('blur'); 
 
     // 3. 次の単語データの取得
-    // ★修正: window.db を明示的に参照
     if (typeof window.db === 'undefined' || !window.currentCategory || !window.db[window.currentCategory]) {
         console.warn("Database not ready or category empty.");
         return;
@@ -211,13 +215,10 @@ async function nextQuestion() {
 
     // ランダム選択
     const idx = Math.floor(Math.random() * list.length);
-    window.currentPair = list[idx]; // ★修正: window.currentPair に代入
+    window.currentPair = list[idx];
 
     // LかRかをランダムに決定
-    // ★重要: 変数の同期ズレを防ぐため window.isTargetL に統一
     window.isTargetL = Math.random() < 0.5;
-    
-    // ★重要: targetObj も window.isTargetL に基づいて確実に更新
     window.targetObj = window.isTargetL ? window.currentPair.l : window.currentPair.r;
     
     console.log("New Question Set:", {
@@ -229,7 +230,7 @@ async function nextQuestion() {
     // 4. 画面表示の更新
     updateWordDisplay();
     
-    // 発音記号と口の形の更新
+    // ★修正: 1_audio_visuals.js に追加した関数を呼び出す
     if (typeof updatePhonemesAndMouth === 'function') {
         updatePhonemesAndMouth(window.currentPair, window.isTargetL);
     }
@@ -237,8 +238,7 @@ async function nextQuestion() {
     // 5. モードごとの挙動設定
     if (window.currentMode === 'listening') {
         // リスニングモード
-        setTimeout(() => speakModel(), 300); // 新しく更新された targetObj を読み上げる
-        
+        setTimeout(() => speakModel(), 300);
         document.getElementById('controls-listening').style.display = 'grid';
         document.getElementById('controls-speaking').style.display = 'none';
         if(targetWordEl) targetWordEl.classList.add('blur'); 
@@ -256,7 +256,6 @@ function updateWordDisplay() {
     const opponentEl = document.getElementById('opponent-word');
     if(!targetEl || !opponentEl) return;
 
-    // ★修正: window. 変数を使用
     if (window.isTargetL) {
         targetEl.innerText = window.currentPair.l.w;
         opponentEl.innerText = window.currentPair.r.w;
@@ -275,13 +274,8 @@ function handleError(e) {
     const fb = document.getElementById('feedback-area');
     if(fb) fb.innerText = "Error: "+ msg;
     
-    const btn = document.getElementById('rec-btn');
-    if(btn) {
-        btn.classList.remove('processing');
-        btn.classList.remove('recording');
-        btn.innerText = "🎤 Start";
-        btn.style.display = 'block';
-    }
+    // ★修正: 録音ボタンのUIリセット
+    if (typeof updateRecordButtonUI === 'function') updateRecordButtonUI();
     isRecording = false;
 }
 
@@ -293,13 +287,11 @@ function handleResult(result) {
     const autoFlow = document.getElementById('toggle-auto-flow').checked;
     const cont = document.querySelector('.container');
     
+    // ★修正: UI更新関数へ委譲
+    if (typeof updateRecordButtonUI === 'function') updateRecordButtonUI();
+    // 録音完了なのでボタンは非表示（または正解時のみ非表示）
     const btn = document.getElementById('rec-btn');
-    if(btn) {
-        btn.classList.remove('processing'); 
-        btn.classList.remove('recording'); 
-        btn.innerText = "🎤 Start";
-        btn.style.display = isOk ? 'none' : 'block'; 
-    }
+    if(btn) btn.style.display = isOk ? 'none' : 'block';
 
     if(typeof updateWordStats === 'function') updateWordStats(isOk); 
     
@@ -362,7 +354,6 @@ function checkListening(userChoseL){
     // userChoseL: true=ユーザーがLを選択, false=ユーザーがRを選択
 
     // ★修正: window.isTargetL を参照して正解を取得
-    // もしundefinedなら、エラー回避でデフォルト値を入れるが、ログを出す
     let correctIsL = window.isTargetL;
     
     if (typeof correctIsL === 'undefined') {
@@ -372,8 +363,6 @@ function checkListening(userChoseL){
 
     console.log(`Check Answer: TargetIsL=${correctIsL}, UserChoseL=${userChoseL}`);
 
-    // 判定ロジック: (正解がL かつ ユーザー選択L) または (正解がR かつ ユーザー選択R)
-    // つまり、「正解のLフラグ」と「ユーザーのL選択フラグ」が一致すれば正解
     const isCorrect = (correctIsL === userChoseL);
     
     const fb = document.getElementById('feedback-area');
@@ -384,7 +373,6 @@ function checkListening(userChoseL){
     const targetEl = document.getElementById('target-word');
     if(targetEl) {
         targetEl.classList.remove('blur');
-        // 表示テキストが最新の正解と合っているか念のため更新
         if(typeof window.targetObj !== 'undefined') targetEl.innerText = window.targetObj.w; 
     }
     

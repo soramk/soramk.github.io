@@ -36,13 +36,21 @@ function populateCategorySelect() {
     const s=document.getElementById('category-select'); 
     if(!s) return;
     s.innerHTML=''; 
-    Object.keys(db).forEach(k=>{
+    
+    // ★修正: window.db を確実に参照
+    const database = window.db || {};
+
+    Object.keys(database).forEach(k=>{
         const o=document.createElement('option');
         o.value=k;
-        o.text=`${k} (${db[k].length})`;
+        o.text=`${k} (${database[k].length})`;
         s.appendChild(o);
     }); 
-    if(db[currentCategory]) s.value=currentCategory; 
+    
+    // ★修正: window.currentCategory を確実に参照
+    if(window.currentCategory && database[window.currentCategory]) {
+        s.value = window.currentCategory;
+    }
 }
 
 // --- DB MANAGER LOGIC ---
@@ -66,10 +74,13 @@ function renderDbList() {
     const l = document.getElementById('db-level-list'); 
     if(!l) return;
     l.innerHTML = '';
-    Object.keys(db).forEach(k => {
+    // ★修正: window.db を確実に参照
+    const database = window.db || {};
+    
+    Object.keys(database).forEach(k => {
         const li = document.createElement('li'); li.className = 'db-item'; li.style.cursor = 'pointer';
         if (k === selectedLevel) li.style.background = 'rgba(128,128,128,0.1)';
-        li.innerHTML = `<span>${k}</span> <span style="font-size:0.8rem; opacity:0.7;">(${db[k].length})</span>`;
+        li.innerHTML = `<span>${k}</span> <span style="font-size:0.8rem; opacity:0.7;">(${database[k].length})</span>`;
         li.onclick = () => selectLevel(k); l.appendChild(li);
     });
 }
@@ -84,7 +95,9 @@ function selectLevel(k) {
 
 function renderWordTable() {
     const container = document.getElementById('word-table-container');
-    const list = db[selectedLevel];
+    const database = window.db || {};
+    const list = database[selectedLevel];
+    
     if (!list || list.length === 0) { container.innerHTML = '<p style="text-align:center; opacity:0.5; padding:20px;">No words yet. Add one!</p>'; return; }
     let html = '<table style="width:100%; border-collapse: collapse; font-size:0.9rem;">';
     html += '<tr style="border-bottom:2px solid rgba(128,128,128,0.2); text-align:left;"><th>L Word</th><th>R Word</th><th style="text-align:right;">Action</th></tr>';
@@ -104,30 +117,35 @@ function renderWordTable() {
 
 function addNewLevel() {
     const n = prompt("New Level Name (e.g., 'Travel'):");
-    if (n && !db[n]) { db[n] = []; saveDb(); renderDbList(); selectLevel(n); } else if(db[n]) { alert("Level already exists!"); }
+    const database = window.db || {};
+    if (n && !database[n]) { database[n] = []; saveDb(); renderDbList(); selectLevel(n); } else if(database[n]) { alert("Level already exists!"); }
 }
 
 function deleteLevel() {
     if (!selectedLevel) return;
-    if (confirm(`Delete level "${selectedLevel}" and all its words?`)) { delete db[selectedLevel]; selectedLevel = null; saveDb(); openDbManager(); }
+    const database = window.db || {};
+    if (confirm(`Delete level "${selectedLevel}" and all its words?`)) { delete database[selectedLevel]; selectedLevel = null; saveDb(); openDbManager(); }
 }
 
 function addWordPair() {
     if (!selectedLevel) return;
+    const database = window.db || {};
     const lWord = prompt("Enter 'L' word (e.g., Light):"); if (!lWord) return;
     const rWord = prompt("Enter 'R' word (e.g., Right):"); if (!rWord) return;
-    db[selectedLevel].push({ l: { w: lWord, b: [] }, r: { w: rWord, b: [] } });
+    database[selectedLevel].push({ l: { w: lWord, b: [] }, r: { w: rWord, b: [] } });
     saveDb(); renderWordTable();
 }
 
 function deletePair(idx) {
     if (!selectedLevel) return;
-    if (confirm("Delete this pair?")) { db[selectedLevel].splice(idx, 1); saveDb(); renderWordTable(); }
+    const database = window.db || {};
+    if (confirm("Delete this pair?")) { database[selectedLevel].splice(idx, 1); saveDb(); renderWordTable(); }
 }
 
 function exportLevel() {
     if (!selectedLevel) return;
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db[selectedLevel], null, 2));
+    const database = window.db || {};
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(database[selectedLevel], null, 2));
     const a = document.createElement('a'); a.setAttribute("href", dataStr); a.setAttribute("download", `LR_Master_${selectedLevel}.json`);
     document.body.appendChild(a); a.click(); a.remove();
 }
@@ -142,7 +160,8 @@ function importLevel(input) {
         try {
             const json = JSON.parse(e.target.result);
             if (!Array.isArray(json)) throw new Error("File must contain a list (array).");
-            if(confirm("Click OK to APPEND.\nClick Cancel to REPLACE.")) { db[selectedLevel] = db[selectedLevel].concat(json); } else { db[selectedLevel] = json; }
+            const database = window.db || {};
+            if(confirm("Click OK to APPEND.\nClick Cancel to REPLACE.")) { database[selectedLevel] = database[selectedLevel].concat(json); } else { database[selectedLevel] = json; }
             saveDb(); renderWordTable(); alert("Import successful!");
         } catch (err) { alert("Import failed: " + err.message); }
         input.value = '';
@@ -150,7 +169,7 @@ function importLevel(input) {
     reader.readAsText(file);
 }
 
-function saveDb() { localStorage.setItem('lr_v24_db', JSON.stringify(db)); }
+function saveDb() { localStorage.setItem('lr_v24_db', JSON.stringify(window.db)); }
 
 async function resetDb(){
     if(confirm("Reset all data to defaults?")) { localStorage.removeItem('lr_v24_db'); await loadDb(); openDbManager(); }
