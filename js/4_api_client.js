@@ -228,8 +228,9 @@ function startWebSpeech() {
     };
 
     webRecognition.onerror = (event) => {
-        // ★修正: 結果取得後の停止処理による 'aborted' エラーは無視する
-        if (event.error === 'aborted') {
+        // ★修正: 明示的な無視条件を追加
+        if (event.error === 'aborted' || event.error === 'not-allowed') {
+            console.log("WebSpeech Ignored Error:", event.error);
             return;
         }
 
@@ -262,6 +263,9 @@ function startWebSpeech() {
 
 function stopWebSpeech() {
     if(webRecognition) {
+        // ★修正: 停止前にイベントハンドラを無効化し、エラー発火を完全に防ぐ
+        webRecognition.onerror = null;
+        webRecognition.onend = null;
         try { 
             webRecognition.abort(); 
         } catch(e){}

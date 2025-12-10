@@ -174,7 +174,7 @@ function skipQuestion() {
  * 次の問題へ進む処理
  */
 async function nextQuestion() {
-    console.log("Moving to next question...");
+    console.log("Moving to next question... (v2.0 fixed)");
 
     // 1. 進行中の録音/認識プロセスを強制リセット
     if (typeof isRecording !== 'undefined' && isRecording) {
@@ -196,7 +196,6 @@ async function nextQuestion() {
     const wordArea = document.getElementById('word-area');
     if(wordArea) wordArea.classList.remove('shake-anim', 'pop-anim');
     
-    // ボタンの成功/失敗色をリセット
     const btnL = document.getElementById('choice-l');
     const btnR = document.getElementById('choice-r');
     if(btnL) btnL.classList.remove('success', 'error');
@@ -228,25 +227,28 @@ async function nextQuestion() {
         targetWord: window.targetObj.w
     });
 
-    // 4. 画面表示の更新（モードによって分岐）
-    const targetEl = document.getElementById('target-word');
-    const opponentEl = document.getElementById('opponent-word');
-    
-    // 発音記号と口の形の更新 (1_audio_visuals.js)
+    // 4. 発音記号と口の形の更新
     if (typeof updatePhonemesAndMouth === 'function') {
         updatePhonemesAndMouth(window.currentPair, window.isTargetL);
     }
 
-    // 5. モードごとの挙動設定
+    // 5. モードごとの画面表示更新
+    const targetEl = document.getElementById('target-word');
+    const opponentEl = document.getElementById('opponent-word');
+
     if (window.currentMode === 'listening') {
         // --- Listening Mode ---
         
-        // ★修正1: 答えがわからないように完全に伏せ字にする（TargetもOpponentも）
-        if(targetEl) targetEl.innerText = "??????";
-        if(opponentEl) opponentEl.innerText = "??????";
-        if(targetEl) targetEl.classList.remove('blur'); // blurクラスではなく文字置換で対応
+        // ★修正: 完全に伏せ字にする（上書きされないようにここで設定）
+        if(targetEl) {
+            targetEl.innerText = "??????";
+            targetEl.classList.remove('blur'); // blurクラスではなくテキスト置換
+        }
+        if(opponentEl) {
+            opponentEl.innerText = "??????";
+        }
 
-        // ★修正2: 選択ボタンのラベルを「L/R」から「実際の単語」に変更
+        // ★修正: ボタンに実際の単語を表示
         if(btnL) btnL.innerText = window.currentPair.l.w;
         if(btnR) btnR.innerText = window.currentPair.r.w;
 
@@ -259,7 +261,7 @@ async function nextQuestion() {
     } else {
         // --- Speaking Mode ---
         
-        // 正解を表示
+        // 通常の単語表示
         updateWordDisplay();
         if(targetEl) targetEl.classList.remove('blur');
 
@@ -382,7 +384,7 @@ function checkListening(userChoseL){
     const autoFlow = document.getElementById('toggle-auto-flow').checked;
     const cont = document.querySelector('.container');
     
-    // ★修正3: 判定後に正解の単語を表示する（??????を解除）
+    // ★修正: 判定後に正解の単語を表示する（??????を解除）
     updateWordDisplay();
     
     if(typeof updateWordStats === 'function') updateWordStats(isCorrect);
