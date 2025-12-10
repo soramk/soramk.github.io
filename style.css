@@ -18,7 +18,8 @@ body.dark-mode {
 }
 
 body { 
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+    /* ★修正: 元のフォント指定に戻しました */
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
     background: var(--bg); 
     color: var(--text); 
     /* iPhone Safe Area対応 */
@@ -70,7 +71,7 @@ body {
 
 .sub-header { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; margin-bottom: 10px; }
 
-/* ▼▼▼ 修正箇所: モード切替ボタンのスタイル強化 ▼▼▼ */
+/* ▼▼▼ モード切替ボタンのスタイル（active修正済み） ▼▼▼ */
 .mode-toggle button { 
     padding: 6px 12px; 
     border-radius: 16px; 
