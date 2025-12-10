@@ -1,4 +1,9 @@
-// ★ HTMLの見た目（テンプレート）だけを管理するファイル
+/**
+ * html_templates.js
+ * アプリケーションのHTML構造を定義し、DOMに展開します。
+ */
+
+// ★ HTMLの見た目（テンプレート）を管理するオブジェクト
 const HTML_TEMPLATES = {
     // 1. メイン画面
     mainInterface: `
@@ -88,7 +93,7 @@ const HTML_TEMPLATES = {
     </div>
     `, 
 
-    // 3. 設定モーダル (修正: プロバイダー選択とOpenAIキー追加)
+    // 3. 設定モーダル
     settingsModal: `
     <div id="settings-modal" class="modal">
         <div class="modal-content">
@@ -145,41 +150,43 @@ const HTML_TEMPLATES = {
     </div>
     `, 
 
-    // 4. DBマネージャー (変更なし)
+    // 4. DBマネージャー
     dbManagerModal: `
-    <div id="db-manager-modal" class="modal">
-        <div class="modal-content" style="max-width: 800px; height: 80vh;">
+    <div id="db-manager-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content db-manager-layout">
             <div class="modal-header">
                 <h3>📝 Word List Manager</h3>
-                <button class="btn-icon" onclick="closeDbManager()">×</button>
+                <button class="btn-close" onclick="closeDbManager()">×</button>
             </div>
             
-            <div style="display: flex; gap: 15px; height: 100%; overflow: hidden;">
-                <div style="width: 200px; border-right: 1px solid rgba(128,128,128,0.2); overflow-y: auto; padding-right: 10px; flex-shrink: 0;">
-                    <h4 style="margin:0 0 10px 0; font-size:0.9rem;">Levels</h4>
+            <div class="modal-body">
+                <div class="sidebar">
+                    <div class="sidebar-header">
+                        <h4 style="margin:0;">Levels</h4>
+                    </div>
                     <ul id="db-level-list" class="db-list"></ul>
-                    <button onclick="addNewLevel()" class="btn-small" style="width:100%; margin-top:10px; background:var(--accent);">+ New Level</button>
-                    <div style="margin-top:20px; border-top:1px solid rgba(128,128,128,0.2); padding-top:10px;">
+                    <button onclick="addNewLevel()" class="btn-small" style="width:100%; margin-top:10px; background:var(--accent); color:white;">+ New Level</button>
+                    <div style="margin-top:auto; border-top:1px solid rgba(128,128,128,0.2); padding-top:10px;">
                         <button onclick="resetDb()" style="color:var(--err); background:none; border:none; text-decoration:underline; font-size:0.8rem; cursor:pointer;">Reset to Defaults</button>
                     </div>
                 </div>
 
-                <div style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div class="main-panel">
+                    <div class="panel-header">
                         <span id="current-level-title" style="font-weight: bold; font-size: 1.1rem; color: var(--primary);">Select a Level</span>
                         <div id="level-actions" style="display:none; gap:5px;">
-                            <button onclick="triggerImport()" class="btn-small" style="background:var(--accent);">📂 Import JSON</button>
-                            <button onclick="exportLevel()" class="btn-small" style="background:#0f172a;">💾 Export</button>
-                            <button onclick="deleteLevel()" class="btn-small" style="background:var(--err);">🗑 Del Level</button>
+                            <button onclick="triggerImport()" class="btn-small" style="background:var(--accent); color:white;">📂 Import</button>
+                            <button onclick="exportLevel()" class="btn-small" style="background:#0f172a; color:white;">💾 Export</button>
+                            <button onclick="deleteLevel()" class="btn-small btn-danger">🗑 Del Level</button>
                         </div>
                     </div>
 
-                    <div id="word-table-container" style="flex-grow: 1; overflow-y: auto; background: rgba(128,128,128,0.05); border-radius: 8px; padding: 5px;">
-                        <p style="text-align:center; opacity:0.5; margin-top:20px;">Select a level from the left to view words.</p>
+                    <div id="word-table-container" class="scrollable-table">
+                        <p style="text-align:center; opacity:0.5; margin-top:50px;">Select a level from the left to view words.</p>
                     </div>
 
-                    <div id="word-actions" style="margin-top: 10px; display:none;">
-                        <button onclick="addWordPair()" class="btn-main" style="width:100%; padding:10px;">+ Add New Word Pair</button>
+                    <div id="word-actions" style="margin-top: 10px; display:none; text-align:right;">
+                        <button onclick="addWordPair()" class="btn-primary">+ Add New Word Pair</button>
                     </div>
                 </div>
             </div>
@@ -189,3 +196,25 @@ const HTML_TEMPLATES = {
     </div>
     `
 };
+
+/**
+ * 初期化処理: 定義されたHTMLテンプレートをDOM（body）に注入します。
+ */
+function initHtmlTemplates() {
+    // 全てのテンプレートを結合してbodyに挿入
+    const fullHtml = 
+        HTML_TEMPLATES.mainInterface + 
+        HTML_TEMPLATES.startOverlay + 
+        HTML_TEMPLATES.settingsModal + 
+        HTML_TEMPLATES.dbManagerModal;
+    
+    document.body.innerHTML = fullHtml;
+    console.log("Templates injected successfully.");
+}
+
+// 読み込み完了時に実行
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHtmlTemplates);
+} else {
+    initHtmlTemplates();
+}

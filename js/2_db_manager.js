@@ -1,3 +1,13 @@
+// --- Global Variables Assumption ---
+// 3_core_logic.js で window.db = {}; が宣言されている前提ですが、
+//念のためここで selectedLevel を定義します。
+let selectedLevel = null;
+
+// もし db が未定義ならエラーになるのを防ぐ安全策（本来は core_logic.js にあるべき）
+if (typeof db === 'undefined') {
+    window.db = {}; 
+}
+
 // --- Data Loading Logic ---
 // 注: db変数は 3_core_logic.js で定義されたグローバル変数を使用します
 
