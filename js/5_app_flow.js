@@ -40,26 +40,26 @@ async function toggleRecord() {
         hasSpoken = false;
         silenceStart = 0;
 
-        // 1. マイクストリーム取得 (全モード必須: 波形と録音のため)
+        // 1. マイクストリーム取得
         let stream = null;
         try {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            currentStream = stream; // グローバル変数に保持
+            currentStream = stream; // グローバル変数
         } catch(err) {
             console.warn("Mic access failed:", err);
-            alert("マイクへのアクセスが拒否されました。設定を確認してください。\nMic access denied.");
+            alert("Mic access denied.");
             isRecording = false;
             btn.classList.remove('recording');
             btn.innerText = "🎤 Start";
             return;
         }
 
-        // 2. ビジュアライザー起動 (1_audio_visuals.js)
+        // 2. ビジュアライザー起動
         if(typeof startAudioVisualization === 'function') {
             startAudioVisualization(stream);
         }
         
-        // 3. MediaRecorder開始 (全モード必須: 録音後の波形と再生のため)
+        // 3. MediaRecorder開始
         let mime='audio/webm'; 
         if(MediaRecorder.isTypeSupported('audio/mp4')) mime='audio/mp4';
         else if(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mime='audio/webm;codecs=opus';
@@ -71,7 +71,7 @@ async function toggleRecord() {
             if (e.data.size > 0) audioChunks.push(e.data);
         };
         
-        // 録音停止時の処理（共通）
+        // 録音停止時の処理
         mediaRecorder.onstop = async () => { 
             // マイク停止
             if(currentStream) {
@@ -80,12 +80,12 @@ async function toggleRecord() {
             }
             
             const blob = new Blob(audioChunks, { type: mime }); 
-            userAudioBlob = blob; // グローバル変数に保持（再生用）
+            userAudioBlob = blob;
             
             const replayBtn = document.getElementById('replay-user-btn');
             if(replayBtn) replayBtn.style.display = 'block';
 
-            // 静的波形生成 (録音データから)
+            // 静的波形生成
             if(audioCtx) {
                 try {
                     const arrayBuffer = await blob.arrayBuffer();
@@ -94,7 +94,7 @@ async function toggleRecord() {
                 } catch(e) { console.error("Audio Decode Error", e); }
             }
 
-            // ★ API分岐: Web Speech以外の場合のみ、ここでAPIに送信
+            // API送信 (Web Speech以外)
             if (currentProvider !== 'web') {
                 if(typeof sendToAI === 'function') {
                     sendToAI(blob);
@@ -104,7 +104,7 @@ async function toggleRecord() {
 
         mediaRecorder.start();
 
-        // 4. Web Speech APIの場合のみ、認識エンジンも同時に回す
+        // 4. Web Speech APIの場合のみ認識エンジン開始
         if (currentProvider === 'web') {
             btn.innerText = "■ Stop (Web)";
             setTimeout(() => {
@@ -125,7 +125,7 @@ async function toggleRecord() {
 // 内部用停止関数
 function stopRecordingInternal() {
     const currentProvider = document.getElementById('ai-provider').value;
-    isRecording = false; // 先にフラグを下げる
+    isRecording = false; 
     
     const btn = document.getElementById('rec-btn');
     if(btn) {
@@ -197,12 +197,13 @@ async function nextQuestion() {
     if(targetWordEl) targetWordEl.classList.add('blur'); 
 
     // 3. 次の単語データの取得
-    if (typeof db === 'undefined' || !currentCategory || !db[currentCategory]) {
+    // ★修正: window.db を明示的に参照
+    if (typeof window.db === 'undefined' || !window.currentCategory || !window.db[window.currentCategory]) {
         console.warn("Database not ready or category empty.");
         return;
     }
 
-    const list = db[currentCategory];
+    const list = window.db[window.currentCategory];
     if (list.length === 0) {
         alert("No words in this category!");
         return;
@@ -210,36 +211,43 @@ async function nextQuestion() {
 
     // ランダム選択
     const idx = Math.floor(Math.random() * list.length);
-    currentPair = list[idx]; // グローバル変数更新
+    window.currentPair = list[idx]; // ★修正: window.currentPair に代入
 
     // LかRかをランダムに決定
-    isTargetL = Math.random() < 0.5;
+    // ★重要: 変数の同期ズレを防ぐため window.isTargetL に統一
+    window.isTargetL = Math.random() < 0.5;
     
-    // ★ FIX: ここで targetObj を明示的に更新しないと、音声や正解判定がズレる
-    window.targetObj = isTargetL ? currentPair.l : currentPair.r;
+    // ★重要: targetObj も window.isTargetL に基づいて確実に更新
+    window.targetObj = window.isTargetL ? window.currentPair.l : window.currentPair.r;
+    
+    console.log("New Question Set:", {
+        pair: window.currentPair.l.w + "/" + window.currentPair.r.w,
+        targetIsL: window.isTargetL,
+        targetWord: window.targetObj.w
+    });
 
     // 4. 画面表示の更新
     updateWordDisplay();
     
     // 発音記号と口の形の更新
     if (typeof updatePhonemesAndMouth === 'function') {
-        updatePhonemesAndMouth(currentPair, isTargetL);
+        updatePhonemesAndMouth(window.currentPair, window.isTargetL);
     }
 
     // 5. モードごとの挙動設定
-    if (currentMode === 'listening') {
+    if (window.currentMode === 'listening') {
         // リスニングモード
         setTimeout(() => speakModel(), 300); // 新しく更新された targetObj を読み上げる
         
         document.getElementById('controls-listening').style.display = 'grid';
         document.getElementById('controls-speaking').style.display = 'none';
-        if(targetWordEl) targetWordEl.classList.add('blur'); // 単語は隠す
+        if(targetWordEl) targetWordEl.classList.add('blur'); 
         
     } else {
         // スピーキングモード
         document.getElementById('controls-listening').style.display = 'none';
         document.getElementById('controls-speaking').style.display = 'grid';
-        if(targetWordEl) targetWordEl.classList.remove('blur'); // 単語を表示
+        if(targetWordEl) targetWordEl.classList.remove('blur');
     }
 }
 
@@ -248,12 +256,13 @@ function updateWordDisplay() {
     const opponentEl = document.getElementById('opponent-word');
     if(!targetEl || !opponentEl) return;
 
-    if (isTargetL) {
-        targetEl.innerText = currentPair.l.w;
-        opponentEl.innerText = currentPair.r.w;
+    // ★修正: window. 変数を使用
+    if (window.isTargetL) {
+        targetEl.innerText = window.currentPair.l.w;
+        opponentEl.innerText = window.currentPair.r.w;
     } else {
-        targetEl.innerText = currentPair.r.w;
-        opponentEl.innerText = currentPair.l.w;
+        targetEl.innerText = window.currentPair.r.w;
+        opponentEl.innerText = window.currentPair.l.w;
     }
 }
 
@@ -349,14 +358,23 @@ function checkPronunciation(result) {
 
 // --- Listening Mode Check ---
 
-function checkListening(uL){
-    // uL: true=User clicked L, false=User clicked R
+function checkListening(userChoseL){
+    // userChoseL: true=ユーザーがLを選択, false=ユーザーがRを選択
+
+    // ★修正: window.isTargetL を参照して正解を取得
+    // もしundefinedなら、エラー回避でデフォルト値を入れるが、ログを出す
+    let correctIsL = window.isTargetL;
     
-    // ★ FIX: グローバルのisTargetLを確実に取得
-    const isLTargetGlobal = (typeof isTargetL !== 'undefined') ? isTargetL : true;
-    
+    if (typeof correctIsL === 'undefined') {
+        console.error("Critical Error: window.isTargetL is undefined. Defaulting to true.");
+        correctIsL = true; 
+    }
+
+    console.log(`Check Answer: TargetIsL=${correctIsL}, UserChoseL=${userChoseL}`);
+
     // 判定ロジック: (正解がL かつ ユーザー選択L) または (正解がR かつ ユーザー選択R)
-    const correct = (isLTargetGlobal && uL) || (!isLTargetGlobal && !uL);
+    // つまり、「正解のLフラグ」と「ユーザーのL選択フラグ」が一致すれば正解
+    const isCorrect = (correctIsL === userChoseL);
     
     const fb = document.getElementById('feedback-area');
     const autoFlow = document.getElementById('toggle-auto-flow').checked;
@@ -367,15 +385,15 @@ function checkListening(uL){
     if(targetEl) {
         targetEl.classList.remove('blur');
         // 表示テキストが最新の正解と合っているか念のため更新
-        if(typeof targetObj !== 'undefined') targetEl.innerText = targetObj.w; 
+        if(typeof window.targetObj !== 'undefined') targetEl.innerText = window.targetObj.w; 
     }
     
-    if(typeof updateWordStats === 'function') updateWordStats(correct);
+    if(typeof updateWordStats === 'function') updateWordStats(isCorrect);
     
     const targetText = targetEl ? targetEl.innerText : "???";
-    addToHistory(targetText, uL?"Selected L":"Selected R", correct);
+    addToHistory(targetText, userChoseL?"Selected L":"Selected R", isCorrect);
     
-    if(correct){
+    if(isCorrect){
         if(typeof sfx !== 'undefined') sfx.correct(); 
         if(cont) {
             cont.classList.add('pop-anim');
@@ -387,7 +405,8 @@ function checkListening(uL){
         }
         if(typeof streak !== 'undefined') streak++;
         
-        const btnId = uL ? 'choice-l' : 'choice-r';
+        // 選択ボタンの色付け
+        const btnId = userChoseL ? 'choice-l' : 'choice-r';
         const btn = document.getElementById(btnId);
         if(btn) btn.classList.add('success');
 
