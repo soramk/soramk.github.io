@@ -119,14 +119,14 @@ function stopRecordingInternal() {
     if(currentProvider === 'web') {
         if(typeof stopWebSpeech === 'function') stopWebSpeech();
         
-        // Web SpeechはAPI通信待ち時間がないので、即座にUIを戻す
-        // (onresultで正解判定が出る場合もあるが、手動停止時はここでもケア)
+        // ★修正: Web Speechは通信がないため、万が一onendが呼ばれなかった時のための保険
         setTimeout(() => {
-            if(btn && btn.innerText === "Analyzing...") {
-                btn.classList.remove('processing');
-                btn.innerText = "🎤 Start";
+            const b = document.getElementById('rec-btn');
+            if(b && (b.innerText === "Analyzing..." || b.innerText.includes("Stop"))) {
+                b.classList.remove('processing');
+                b.innerText = "🎤 Start";
             }
-        }, 500);
+        }, 800);
     }
     
     // MediaRecorder停止 (これが onstop を発火させ、波形生成を行う)

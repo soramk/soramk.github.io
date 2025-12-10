@@ -123,7 +123,7 @@ function startWebSpeech() {
     if(!SpeechRecognition) { alert("Web Speech API not supported."); return; }
 
     if(webRecognition) {
-        try { webRecognition.stop(); webRecognition.abort(); } catch(e){}
+        try { webRecognition.abort(); } catch(e){}
         webRecognition = null;
     }
 
@@ -133,11 +133,15 @@ function startWebSpeech() {
     webRecognition.maxAlternatives = 1;
 
     webRecognition.onstart = () => {
-        document.getElementById('feedback-area').innerText = "Listening (Browser)...";
+        const fb = document.getElementById('feedback-area');
+        if(fb) fb.innerText = "Listening (Browser)...";
         if(sfx && sfx.start) sfx.start();
     };
 
     webRecognition.onresult = (event) => {
+        // 録音停止済みなら結果を無視
+        if (!isRecording) return;
+
         const heard = event.results[0][0].transcript.toLowerCase();
         const target = targetObj.w.toLowerCase();
         const distractor = (isLTarget?currentPair.r:currentPair.l).w.toLowerCase();
@@ -163,19 +167,28 @@ function startWebSpeech() {
 
     webRecognition.onerror = (event) => {
         console.error("Web Speech Error:", event.error);
-        // エラーが出ても、app_flow.js側でstopRecordingInternalが呼ばれるか、
-        // onendが発火してUIが戻るようにする
-        if(event.error !== 'no-speech' && event.error !== 'aborted') {
-             // 致命的なエラーだけ表示
-             document.getElementById('feedback-area').innerText = "Error: " + event.error;
+        
+        // エラー表示
+        const fb = document.getElementById('feedback-area');
+        if(fb) fb.innerText = "Error: " + event.error;
+
+        // UIの強制リセット
+        const btn = document.getElementById('rec-btn');
+        if(btn) {
+            btn.classList.remove('processing');
+            btn.classList.remove('recording');
+            btn.innerText = "🎤 Start";
+            btn.style.display = 'block';
         }
+        
+        // フラグのリセット
+        isRecording = false; 
     };
 
     webRecognition.onend = () => {
-        // 結果が出ずに終わった場合（無言など）、UIをリセットする
+        // 正常終了時にボタンがまだ戻っていなければ戻す
         const btn = document.getElementById('rec-btn');
         if(btn && (btn.classList.contains('processing') || btn.classList.contains('recording'))) {
-            // Analyzing...またはRecordingのまま終わったらリセット
             btn.classList.remove('processing');
             btn.classList.remove('recording');
             btn.innerText = "🎤 Start";
@@ -187,7 +200,6 @@ function startWebSpeech() {
         webRecognition.start();
     } catch(e) {
         console.error("Start Failed", e);
-        // スタート失敗したら即時リセット
         const btn = document.getElementById('rec-btn');
         if(btn) {
             btn.classList.remove('recording');
@@ -198,6 +210,9 @@ function startWebSpeech() {
 
 function stopWebSpeech() {
     if(webRecognition) {
-        try { webRecognition.stop(); } catch(e){}
+        try { 
+            // 停止要求
+            webRecognition.stop(); 
+        } catch(e){}
     }
 }
