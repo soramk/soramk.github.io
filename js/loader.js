@@ -6,7 +6,7 @@
 
 (function() {
     // 1. キャッシュ対策用のバージョン番号 (変更があればここを変えるだけで全ファイル更新されます)
-    const APP_VERSION = 'v1.3.0'; 
+    const APP_VERSION = 'v1.4.0'; 
 
     // 2. 読み込むファイルのリスト (順番が重要です)
     const scripts = [
@@ -35,7 +35,8 @@
         'js/8_scoring.js',
         'js/9_overlay_playback.js',
         'js/10_help_link.js',
-        'js/11_formant_game.js'
+        // 'js/11_formant_game.js' // 正常に動作しなくなるので一度無効化
+        'js/12_mirror_mode.js'
     ];
 
     // 3. 順次読み込み処理 (Recursion to ensure execution order)

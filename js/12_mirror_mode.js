@@ -1,0 +1,191 @@
+/**
+ * 12_mirror_mode.js (v2: 設定連動版)
+ * 口の形の図解（Diagram）の横に、Webカメラの映像を表示する「ミラーモード」を追加するプラグイン。
+ * ★設定画面でオン/オフを切り替え可能にしました。
+ */
+
+(function() {
+    let videoStream = null;
+    const STORAGE_KEY = 'lr_mirror_enabled';
+
+    // 初期化
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            injectSettingsToggle(); // 設定画面にスイッチ追加
+            applyState();           // 現在の設定に合わせて表示/非表示
+        }, 800);
+    });
+
+    // 1. 設定画面にチェックボックスを注入
+    function injectSettingsToggle() {
+        const settingsBody = document.querySelector('#settings-modal .modal-content div[style*="overflow"]');
+        if (!settingsBody) return;
+
+        // 既にスイッチがあるなら何もしない
+        if (document.getElementById('setting-mirror-wrapper')) return;
+
+        // スイッチUI作成
+        const wrapper = document.createElement('div');
+        wrapper.id = 'setting-mirror-wrapper';
+        wrapper.style.marginBottom = '15px';
+        wrapper.style.padding = '10px';
+        wrapper.style.background = 'rgba(128,128,128,0.05)';
+        wrapper.style.borderRadius = '8px';
+
+        const label = document.createElement('label');
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.cursor = 'pointer';
+        label.style.fontWeight = 'bold';
+        label.style.fontSize = '0.9rem';
+        label.style.color = 'var(--text)';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = 'toggle-mirror-feature';
+        checkbox.style.marginRight = '10px';
+        
+        // 保存された設定を読み込む (デフォルトは false = オフ)
+        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+        checkbox.checked = isEnabled;
+
+        // 切り替え時の動作
+        checkbox.onchange = function() {
+            localStorage.setItem(STORAGE_KEY, checkbox.checked);
+            applyState(); // 即座に反映
+        };
+
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode("📷 Enable Mirror Mode (Webcam)"));
+        wrapper.appendChild(label);
+        
+        // 説明文
+        const desc = document.createElement('p');
+        desc.style.fontSize = '0.8rem';
+        desc.style.margin = '5px 0 0 25px';
+        desc.style.opacity = '0.7';
+        desc.innerText = "Show a camera view next to the mouth diagram to check your form.";
+        wrapper.appendChild(desc);
+
+        // 「Playback Speed」設定の前あたりに挿入
+        const speedSetting = document.getElementById('speech-rate').closest('div');
+        if(speedSetting) {
+            settingsBody.insertBefore(wrapper, speedSetting);
+        } else {
+            settingsBody.appendChild(wrapper);
+        }
+    }
+
+    // 2. 現在の設定に基づいてボタンの表示/非表示を切り替え
+    function applyState() {
+        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+        const btn = document.getElementById('mirror-toggle-btn');
+        const container = document.getElementById('mirror-container');
+
+        if (isEnabled) {
+            // 有効ならボタンを生成（なければ）して表示
+            if (!btn) injectMirrorButton();
+            if (btn) btn.style.display = 'inline-block';
+        } else {
+            // 無効ならボタンを隠す & カメラ停止
+            if (btn) btn.style.display = 'none';
+            if (container && container.style.display !== 'none') {
+                // カメラが動いていたら止める
+                const video = document.getElementById('mirror-video');
+                if(video) stopCamera(video);
+                container.style.display = 'none';
+                if(btn) {
+                    btn.innerText = '🪞 Mirror';
+                    btn.style.background = '#334155';
+                }
+            }
+        }
+    }
+
+    // 3. ミラーボタンとエリアの生成（ロジックは前回と同じ）
+    function injectMirrorButton() {
+        const diagramBox = document.querySelector('.diagram-box');
+        if (!diagramBox) return;
+
+        // ミラー画面エリア
+        if (!document.getElementById('mirror-container')) {
+            const mirrorContainer = document.createElement('div');
+            mirrorContainer.id = 'mirror-container';
+            mirrorContainer.style.display = 'none';
+            mirrorContainer.style.width = '100px';
+            mirrorContainer.style.height = '80px';
+            mirrorContainer.style.marginLeft = '10px';
+            mirrorContainer.style.borderRadius = '8px';
+            mirrorContainer.style.overflow = 'hidden';
+            mirrorContainer.style.background = '#000';
+            mirrorContainer.style.border = '2px solid var(--accent)';
+            mirrorContainer.style.position = 'relative';
+
+            const video = document.createElement('video');
+            video.id = 'mirror-video';
+            video.autoplay = true;
+            video.muted = true;
+            video.playsInline = true;
+            video.style.transform = 'scaleX(-1)';
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.objectFit = 'cover';
+
+            mirrorContainer.appendChild(video);
+            diagramBox.appendChild(mirrorContainer);
+        }
+
+        // 切替ボタン
+        if (!document.getElementById('mirror-toggle-btn')) {
+            const toggleBtn = document.createElement('button');
+            toggleBtn.id = 'mirror-toggle-btn';
+            toggleBtn.innerText = '🪞 Mirror';
+            toggleBtn.className = 'btn-small';
+            toggleBtn.style.marginLeft = 'auto';
+            toggleBtn.style.background = '#334155';
+            toggleBtn.style.color = 'white';
+            
+            toggleBtn.onclick = function() {
+                const container = document.getElementById('mirror-container');
+                const video = document.getElementById('mirror-video');
+                toggleMirror(container, video, toggleBtn);
+            };
+
+            const diagramText = document.querySelector('.diagram-text');
+            if(diagramText) {
+                diagramText.appendChild(document.createElement('br'));
+                diagramText.appendChild(toggleBtn);
+            }
+        }
+    }
+
+    async function toggleMirror(container, video, btn) {
+        if (container.style.display === 'none') {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                video.srcObject = videoStream;
+                container.style.display = 'block';
+                btn.innerText = '🪞 OFF';
+                btn.style.background = 'var(--accent)';
+            } catch (err) {
+                alert("カメラの起動に失敗しました: " + err.message);
+            }
+        } else {
+            stopCamera(video);
+            container.style.display = 'none';
+            btn.innerText = '🪞 Mirror';
+            btn.style.background = '#334155';
+        }
+    }
+
+    function stopCamera(video) {
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
+            videoStream = null;
+        }
+        if (video) {
+            video.srcObject = null;
+        }
+    }
+
+})();
