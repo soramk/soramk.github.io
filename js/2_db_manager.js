@@ -130,10 +130,38 @@ function deleteLevel() {
 function addWordPair() {
     if (!selectedLevel) return;
     const database = window.db || {};
-    const lWord = prompt("Enter 'L' word (e.g., Light):"); if (!lWord) return;
-    const rWord = prompt("Enter 'R' word (e.g., Right):"); if (!rWord) return;
-    database[selectedLevel].push({ l: { w: lWord, b: [] }, r: { w: rWord, b: [] } });
-    saveDb(); renderWordTable();
+
+    // 1. 単語の入力
+    const lWord = prompt("Lの単語を入力してください (例: Light):"); 
+    if (!lWord) return;
+    
+    const rWord = prompt("Rの単語を入力してください (例: Right):"); 
+    if (!rWord) return;
+
+    // 2. 音素データの簡易入力 (空でもOKにする)
+    // 入力例: l_shape,wide,alveolar
+    const lPhonemesStr = prompt(`"${lWord}" の口の動き（音素ID）をカンマ区切りで入力してください。\n(省略可。例: l_shape,wide,alveolar)`, "l_shape,wide");
+    const rPhonemesStr = prompt(`"${rWord}" の口の動き（音素ID）をカンマ区切りで入力してください。\n(省略可。例: r_shape,wide,alveolar)`, "r_shape,wide");
+
+    // 音素文字列をオブジェクト配列に変換するヘルパー
+    const parsePhonemes = (str) => {
+        if (!str) return [];
+        return str.split(',').map(s => {
+            const key = s.trim();
+            // IDがそのまま表示記号になる簡易実装
+            return { p: key, t: key }; 
+        }).filter(item => item.p !== "");
+    };
+
+    // 3. データの登録
+    database[selectedLevel].push({ 
+        l: { w: lWord, b: parsePhonemes(lPhonemesStr) }, 
+        r: { w: rWord, b: parsePhonemes(rPhonemesStr) } 
+    });
+
+    saveDb(); 
+    renderWordTable();
+    alert(`"${lWord} / ${rWord}" を追加しました。`);
 }
 
 function deletePair(idx) {
