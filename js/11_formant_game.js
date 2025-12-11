@@ -1,38 +1,106 @@
 /**
- * 11_formant_game.js (Fix Version)
- * 既存の visualize 関数を「上書き」するのではなく、
- * ゲームモード以外は「元の関数を呼び出す」設計に変更しました。
- * これにより、元の波形やスペクトログラムの表示崩れを完全に防ぎます。
+ * 11_formant_game.js (v2: 設定連動 & 日本語化)
+ * L/Rの違い（F3フォルマント）を可視化する「F3 Game」モードを追加するプラグイン。
+ * 設定画面でオン/オフが可能。
+ * 既存の visualize 関数を安全に拡張（元の表示を壊さない設計）。
  */
 
 (function() {
-    // --- 定数設定 ---
+    const STORAGE_KEY = 'lr_f3game_enabled';
     const GAME_MODE_NAME = 'formant_game';
     
     // F3の検出範囲 (Hz)
-    // 一般的なF3: 男性2500Hz前後, 女性3000Hz前後
-    // Rの低下: 1500Hz〜2000Hz付近まで落ちる
     const FREQ_MIN = 1200;
     const FREQ_MAX = 3500;
 
-    // --- 1. 元の関数を退避（バックアップ） ---
-    // これを使って、ゲームモード以外の時は元の処理に丸投げします
+    // 元の関数を退避
     const originalToggleVisMode = window.toggleVisMode;
     const originalVisualize = window.visualize;
+
+    // --- 初期化 ---
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            injectSettingsToggle();
+        }, 800);
+    });
+
+    // 1. 設定画面にスイッチを追加
+    function injectSettingsToggle() {
+        const settingsBody = document.querySelector('#settings-modal .modal-content div[style*="overflow"]');
+        if (!settingsBody || document.getElementById('setting-f3game-wrapper')) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'setting-f3game-wrapper';
+        wrapper.style.marginBottom = '15px';
+        wrapper.style.padding = '10px';
+        wrapper.style.background = 'rgba(128,128,128,0.05)';
+        wrapper.style.borderRadius = '8px';
+
+        const label = document.createElement('label');
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.cursor = 'pointer';
+        label.style.fontWeight = 'bold';
+        label.style.fontSize = '0.9rem';
+        label.style.color = 'var(--text)';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = 'toggle-f3game-feature';
+        checkbox.style.marginRight = '10px';
+        
+        // デフォルトはオフにしておく（または好みでオン）
+        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+        checkbox.checked = isEnabled;
+
+        checkbox.onchange = function() {
+            localStorage.setItem(STORAGE_KEY, checkbox.checked);
+            // もし現在ゲームモード中にオフにされたら、Waveに戻すなどの処理が必要だが、
+            // 次回の切り替えから反映されれば十分なので今回はスキップ
+        };
+
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode("🎯 F3ゲーム (可視化トレーニング) を有効にする"));
+        wrapper.appendChild(label);
+
+        const desc = document.createElement('p');
+        desc.style.fontSize = '0.8rem';
+        desc.style.margin = '5px 0 0 25px';
+        desc.style.opacity = '0.7';
+        desc.innerText = "ビジュアライザーに、舌の位置(フォルマント)を可視化してゲーム感覚で調整するモードを追加します。";
+        wrapper.appendChild(desc);
+
+        // 挿入場所: Blitz設定の前あたり
+        const blitzSetting = document.getElementById('setting-blitz-wrapper');
+        if(blitzSetting) {
+            blitzSetting.parentNode.insertBefore(wrapper, blitzSetting.nextSibling); // Blitzの後ろ
+        } else {
+            settingsBody.appendChild(wrapper);
+        }
+    }
 
     // --- 2. モード切替ロジックの拡張 ---
     
     window.toggleVisMode = function() {
-        // サイクル: wave -> spectrogram -> frequency -> [GAME] -> wave
+        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+
+        // サイクル: wave -> spectrogram -> frequency -> [GAME if enabled] -> wave
         if (window.visMode === 'frequency') {
-            window.visMode = GAME_MODE_NAME;
-            updateGameExplanation();
+            if (isEnabled) {
+                // 有効ならゲームモードへ
+                window.visMode = GAME_MODE_NAME;
+                updateGameExplanation();
+            } else {
+                // 無効なら元のロジック（通常はWaveに戻る）へ
+                // ※ originalToggleVisModeの実装は freq -> wave なので、それを呼ぶだけでOK
+                if (originalToggleVisMode) originalToggleVisMode();
+            }
         } else if (window.visMode === GAME_MODE_NAME) {
+            // ゲームモードからは必ずWaveに戻る
             window.visMode = 'wave';
-            // 元の表示に戻すため、標準の説明更新を呼ぶ
             if (typeof updateVisExplanation === 'function') updateVisExplanation();
         } else {
-            // それ以外は元のロジックに任せる
+            // それ以外（wave -> spectrogram など）は元のロジックにお任せ
             if (originalToggleVisMode) originalToggleVisMode();
         }
     };
@@ -48,21 +116,17 @@
     }
 
 
-    // --- 3. 描画ループの拡張 (ここが修正の肝) ---
+    // --- 3. 描画ループの拡張 ---
 
     window.visualize = function() {
-        // 録音中でなければ何もしない（元のロジック準拠）
         if(!window.isRecording) return;
 
         if (window.visMode === GAME_MODE_NAME) {
-            // --- A. ゲームモードの場合 ---
-            // 自分で描画し、自分で次のフレームを予約する
+            // ゲームモードなら独自描画
             drawGameMode();
             requestAnimationFrame(window.visualize);
         } else {
-            // --- B. それ以外（Wave, Spectrogram, Spectrum） ---
-            // ★重要: 元の関数を呼び出すだけ！
-            // 元の関数内で requestAnimationFrame(visualize) が呼ばれるため、ループは継続する
+            // それ以外は元の描画関数に任せる（これで既存表示は壊れない）
             if (originalVisualize) originalVisualize();
         }
     };
@@ -75,20 +139,16 @@
         if (!canvas || !window.analyser || !window.dataArray) return;
         
         const ctx = canvas.getContext("2d");
-        // Canvasの解像度対応
         const d = window.devicePixelRatio || 1;
-        // CSS上のサイズを取得しないと、拡大縮小でおかしくなることがあるため実サイズを使用
         const w = canvas.width / d;
         const h = canvas.height / d;
 
-        // 周波数データを取得
         window.analyser.getByteFrequencyData(window.dataArray);
 
-        // 背景クリア
+        // 背景
         ctx.fillStyle='#020617'; 
         ctx.fillRect(0,0,w,h);
 
-        // --- ゾーンの描画 ---
         // L Zone (Top, Blue)
         ctx.fillStyle = 'rgba(30, 64, 175, 0.3)';
         ctx.fillRect(0, 0, w, h * 0.4); 
@@ -102,20 +162,17 @@
         ctx.fillStyle = '#f87171';
         ctx.fillText("R Zone (Target)", 10, h - 10);
 
-        // --- ピーク検出 (F3付近) ---
+        // ピーク検出
         const sampleRate = window.audioCtx.sampleRate;
         const fftSize = window.analyser.fftSize; 
         const hzPerBin = sampleRate / fftSize; 
 
-        // 検索範囲 (インデックス)
         const startBin = Math.floor(FREQ_MIN / hzPerBin);
         const endBin = Math.floor(FREQ_MAX / hzPerBin);
 
         let maxVal = 0;
         let maxIndex = 0;
         
-        // 範囲内で最大の音量を持つ周波数を探す
-        // ノイズ対策: 少し平均化するか、単純に最大値を取る
         for (let i = startBin; i <= endBin; i++) {
             if (window.dataArray[i] > maxVal) {
                 maxVal = window.dataArray[i];
@@ -123,36 +180,27 @@
             }
         }
 
-        // --- ボールの位置計算 ---
         const currentHz = maxIndex * hzPerBin;
-        
-        // 正規化 (0.0 ～ 1.0)
         let normalizedPos = (currentHz - FREQ_MIN) / (FREQ_MAX - FREQ_MIN);
         if(normalizedPos < 0) normalizedPos = 0;
         if(normalizedPos > 1) normalizedPos = 1;
 
-        // Y座標 (Canvasは上が0なので 1.0 - pos)
-        // normalizedPos: 0(低音=R) -> 1(高音=L)
-        // Y座標: h(下) -> 0(上)
         const targetY = h - (normalizedPos * h);
 
-        // --- 描画 ---
-        if (maxVal > 50) { // ある程度の音量がある時だけ表示
+        if (maxVal > 50) { 
             // ボール
             ctx.beginPath();
             ctx.arc(w / 2, targetY, 15, 0, Math.PI * 2);
-            ctx.fillStyle = '#facc15'; // Yellow
+            ctx.fillStyle = '#facc15'; 
             ctx.fill();
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // 周波数表示
             ctx.fillStyle = '#fff';
             ctx.font = '12px monospace';
             ctx.fillText(`${Math.round(currentHz)}Hz`, w/2 + 20, targetY + 4);
 
-            // ヒット判定テキスト
             ctx.font = 'bold 24px sans-serif';
             if (normalizedPos > 0.6) { 
                 ctx.fillStyle = '#60a5fa';
@@ -166,7 +214,7 @@
             ctx.font = '14px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText("Speak Louder...", w/2, h/2);
-            ctx.textAlign = 'left'; // 戻す
+            ctx.textAlign = 'left'; 
         }
     }
 
