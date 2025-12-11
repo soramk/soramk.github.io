@@ -33,7 +33,8 @@
         // --- Extensions ---
         'js/7_extensions.js',
         'js/8_scoring.js',
-        'js/9_overlay_playback.js'
+        'js/9_overlay_playback.js',
+        'js/10_help_link.js'
     ];
 
     // 3. 順次読み込み処理 (Recursion to ensure execution order)
