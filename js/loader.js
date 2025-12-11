@@ -6,7 +6,7 @@
 
 (function() {
     // 1. キャッシュ対策用のバージョン番号 (変更があればここを変えるだけで全ファイル更新されます)
-    const APP_VERSION = 'v1.4.0'; 
+    const APP_VERSION = 'v1.5.0'; 
 
     // 2. 読み込むファイルのリスト (順番が重要です)
     const scripts = [
@@ -31,12 +31,13 @@
         'https://cdn.jsdelivr.net/npm/chart.js', // CDNはそのまま
 
         // --- Extensions ---
-        'js/7_extensions.js',
-        'js/8_scoring.js',
-        'js/9_overlay_playback.js',
-        'js/10_help_link.js',
-        // 'js/11_formant_game.js' // 正常に動作しなくなるので一度無効化
-        'js/12_mirror_mode.js'
+        'js/7_extensions.js',           // 学習記録の自動保存とグラフ化機能
+        'js/8_scoring.js',              // AIによる100点満点スコアリング機能
+        'js/9_overlay_playback.js',     // 「自分の声とモデル音声の重ね合わせ再生（オーバーレイ再生）」機能
+        'js/10_help_link.js',           // ヘルプリンクの追加
+        'js/11_formant_game.js',        // フォルマント（F3）の可視化ゲーム機能
+        'js/12_mirror_mode.js',         // Webカメラによる「リアルタイム・ミラーリング」機能
+        'js/13_blitz_mode.js'           // 高速モード（Blitz Mode）ミニマル・ペア・ブリッツ（聴覚特訓）機能
     ];
 
     // 3. 順次読み込み処理 (Recursion to ensure execution order)
