@@ -117,37 +117,40 @@ function updateRecordButtonUI() {
     }
 }
 
-// ★追加: モード切替（Listen / Speak）の制御
+// モード切替（Listen / Speak）の制御
 function setMode(mode) {
-    // 1. グローバル変数を更新
+    // 1. 強制的に録音/再生プロセスを停止
+    if (typeof stopRecordingInternal === 'function') {
+        stopRecordingInternal();
+    }
+    
+    // 2. グローバル変数を更新
     if (typeof window.currentMode !== 'undefined') {
         window.currentMode = mode;
     }
 
-    // 2. タブの要素を取得
-    const tabSpeak = document.getElementById('tab-speak');
-    const tabListen = document.getElementById('tab-listen');
+    // 3. IDの不一致を修正 (HTMLのID 'mode-speak/listen' に合わせる)
+    const tabSpeak = document.getElementById('mode-speak');
+    const tabListen = document.getElementById('mode-listen');
     
-    // 3. 要素があればクラスを付け替え
+    // 4. クラスの付け替え
     if (tabSpeak && tabListen) {
-        // 一旦両方の active を外す
         tabSpeak.classList.remove('active');
         tabListen.classList.remove('active');
 
-        // モードに応じて active を付ける
         if (mode === 'speaking') {
             tabSpeak.classList.add('active');
         } else {
             tabListen.classList.add('active');
         }
-    } else {
-        console.warn("Tabs not found. Check HTML IDs: 'tab-speak' & 'tab-listen'");
     }
 
-    // 4. 画面を更新
-    if (typeof nextQuestion === 'function') {
-        nextQuestion();
-    }
+    // 5. 画面を更新（少し待機して状態がクリアになってから実行）
+    setTimeout(() => {
+        if (typeof nextQuestion === 'function') {
+            nextQuestion();
+        }
+    }, 50);
 }
 
 // キーボードショートカット

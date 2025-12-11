@@ -37,21 +37,21 @@ const sfx = {
 // --- 2. Data Definition (Visuals) ---
 const baseFace = `<path fill="none" stroke="#cbd5e1" stroke-width="2" d="M10,50 Q10,10 45,10 Q80,10 80,50 Q80,90 45,90 Q10,90 10,50" />`;
 const visemes = {
-    bilabial:{t:"Bilabial",d:"Lips closed (p,b,m)",p:`${baseFace}<path d="M30,60 Q45,60 60,60" stroke="#333" stroke-width="3"/><path d="M30,60 Q45,65 60,60" stroke="#333" stroke-width="1"/>`},
-    labiodental:{t:"Labiodental",d:"Top teeth on lip (f,v)",p:`${baseFace}<path d="M30,55 Q45,55 60,55" stroke="#fff" stroke-width="4"/><path d="M30,62 Q45,65 60,62" fill="none" stroke="#333" stroke-width="2"/>`},
-    dental:{t:"Dental",d:"Tongue between teeth (th)",p:`${baseFace}<path d="M30,55 Q45,55 60,55" stroke="#fff" stroke-width="4"/><path d="M30,65 Q45,65 60,65" stroke="#fff" stroke-width="4"/><path d="M35,60 Q45,60 55,60" stroke="#ef4444" stroke-width="3"/>`},
-    alveolar:{t:"Alveolar",d:"Tongue to gum (t,d,n)",p:`${baseFace}<rect x="30" y="55" width="30" height="10" fill="#333"/><rect x="30" y="55" width="30" height="4" fill="#fff"/><rect x="30" y="61" width="30" height="4" fill="#fff"/>`},
-    postalveolar:{t:"Post-Alveolar",d:"Lips rounded (sh,ch)",p:`${baseFace}<circle cx="45" cy="60" r="12" fill="#333"/><rect x="35" y="58" width="20" height="4" fill="#fff"/>`},
-    velar:{t:"Velar",d:"Back of throat (k,g)",p:`${baseFace}<path d="M30,55 Q45,75 60,55" fill="#333"/>`},
-    l_shape:{t:"L-Shape",d:"Tongue tip UP",p:`${baseFace}<path d="M30,55 Q45,70 60,55" fill="#333"/><path d="M40,55 Q45,50 50,55" fill="#ef4444"/>`},
-    r_shape:{t:"R-Shape",d:"Tongue pulled BACK",p:`${baseFace}<circle cx="45" cy="60" r="10" fill="none" stroke="#333" stroke-width="2"/><path d="M40,65 Q45,55 50,65" fill="#ef4444"/>`},
-    pucker:{t:"Pucker",d:"Lips small (w)",p:`${baseFace}<circle cx="45" cy="60" r="5" fill="#333" stroke="#333" stroke-width="2"/>`},
-    wide:{t:"Wide",d:"Open big (a)",p:`${baseFace}<path d="M25,55 Q45,85 65,55" fill="#333"/>`},
-    mid:{t:"Mid",d:"Relaxed (e, uh)",p:`${baseFace}<path d="M30,58 Q45,72 60,58" fill="#333"/>`},
-    spread:{t:"Spread",d:"Wide smile (iy)",p:`${baseFace}<path d="M25,60 Q45,65 65,60" fill="#333"/><path d="M25,60 Q45,60 65,60" stroke="#333" stroke-width="1"/>`},
-    round:{t:"Round",d:"Oval shape (o)",p:`${baseFace}<ellipse cx="45" cy="60" rx="10" ry="15" fill="#333"/>`},
-    u_shape:{t:"U-Shape",d:"Tight circle (u)",p:`${baseFace}<circle cx="45" cy="60" r="8" fill="#333"/>`},
-    silence:{t:"Ready",d:"...",p:`${baseFace}<path d="M35,60 L55,60" stroke="#333" stroke-width="2"/>`}
+    bilabial: { t: "両唇音 (Bilabial)", d: "上下の唇をしっかりと閉じて、破裂させるように音を出します (p, b, m)。", p: `${baseFace}<path d="M30,60 Q45,60 60,60" stroke="#333" stroke-width="3"/><path d="M30,60 Q45,65 60,60" stroke="#333" stroke-width="1"/>` },
+    labiodental: { t: "唇歯音 (Labiodental)", d: "上の前歯で下唇を軽く噛むように触れ、隙間から息を出します (f, v)。", p: `${baseFace}<path d="M30,55 Q45,55 60,55" stroke="#fff" stroke-width="4"/><path d="M30,62 Q45,65 60,62" fill="none" stroke="#333" stroke-width="2"/>` },
+    dental: { t: "歯音 (Dental)", d: "舌先を上下の歯で軽く挟み、その隙間から息を流します (th)。", p: `${baseFace}<path d="M30,55 Q45,55 60,55" stroke="#fff" stroke-width="4"/><path d="M30,65 Q45,65 60,65" stroke="#fff" stroke-width="4"/><path d="M35,60 Q45,60 55,60" stroke="#ef4444" stroke-width="3"/>` },
+    alveolar: { t: "歯茎音 (Alveolar)", d: "舌先を上の前歯の裏（歯茎）に付け、弾くように音を出します (t, d, n)。", p: `${baseFace}<rect x="30" y="55" width="30" height="10" fill="#333"/><rect x="30" y="55" width="30" height="4" fill="#fff"/><rect x="30" y="61" width="30" height="4" fill="#fff"/>` },
+    postalveolar: { t: "後部歯茎音 (Post-Alveolar)", d: "唇を少し丸めて突き出し、舌を歯茎より少し後ろに引きます (sh, ch)。", p: `${baseFace}<circle cx="45" cy="60" r="12" fill="#333"/><rect x="35" y="58" width="20" height="4" fill="#fff"/>` },
+    velar: { t: "軟口蓋音 (Velar)", d: "舌の後ろを持ち上げて喉の奥（軟口蓋）につけ、息を止めたり流したりします (k, g)。", p: `${baseFace}<path d="M30,55 Q45,75 60,55" fill="#333"/>` },
+    l_shape: { t: "Lの発音 (L-Shape)", d: "★重要: 舌先を上の前歯の裏に強く押し付けます。舌の両側から声を出すイメージです。", p: `${baseFace}<path d="M30,55 Q45,70 60,55" fill="#333"/><path d="M40,55 Q45,50 50,55" fill="#ef4444"/>` },
+    r_shape: { t: "Rの発音 (R-Shape)", d: "★重要: 舌先をどこにも触れないように後ろへ引きます。唇を少し丸めると出しやすくなります。", p: `${baseFace}<circle cx="45" cy="60" r="10" fill="none" stroke="#333" stroke-width="2"/><path d="M40,65 Q45,55 50,65" fill="#ef4444"/>` },
+    pucker: { t: "すぼめ (Pucker)", d: "口を小さくすぼめて、前に突き出します (w)。", p: `${baseFace}<circle cx="45" cy="60" r="5" fill="#333" stroke="#333" stroke-width="2"/>` },
+    wide: { t: "大きく開く (Wide)", d: "あごを下げて、口を大きく開けます (a)。", p: `${baseFace}<path d="M25,55 Q45,85 65,55" fill="#333"/>` },
+    mid: { t: "中間の開き (Mid)", d: "口の力を抜いて、自然に少し開けた状態です (e, uh)。", p: `${baseFace}<path d="M30,58 Q45,72 60,58" fill="#333"/>` },
+    spread: { t: "横に引く (Spread)", d: "口角を左右に強く引いて、ニコッと笑うような形にします (iy)。", p: `${baseFace}<path d="M25,60 Q45,65 65,60" fill="#333"/><path d="M25,60 Q45,60 65,60" stroke="#333" stroke-width="1"/>` },
+    round: { t: "丸める (Round)", d: "口を縦長の楕円形に開けます (o)。", p: `${baseFace}<ellipse cx="45" cy="60" rx="10" ry="15" fill="#333"/>` },
+    u_shape: { t: "強く丸める (U-Shape)", d: "唇を強く丸めて、小さく突き出します (u)。", p: `${baseFace}<circle cx="45" cy="60" r="8" fill="#333"/>` },
+    silence: { t: "待機中 (Ready)", d: "上のボタンから音素を選んでください。", p: `${baseFace}<path d="M35,60 L55,60" stroke="#333" stroke-width="2"/>` }
 };
 
 // --- Visualizer State ---

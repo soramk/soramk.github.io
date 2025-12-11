@@ -220,9 +220,12 @@ button.action-btn {
 /* --- Word List Manager Specific Layout --- */
 .modal-content.db-manager-layout {
     max-width: 900px;
-    height: 80vh;
+    width: 95%;          /* 横幅を少し広げる */
+    height: 90dvh;       /* vhではなくdvhを使うことでスマホのアドレスバー問題を回避 */
     padding: 0;
     overflow: hidden;
+    display: flex;       /* Flexboxを明示 */
+    flex-direction: column; 
 }
 
 .modal-body {
@@ -242,11 +245,19 @@ button.action-btn {
     flex-direction: column;
 }
 .db-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; text-align: left; }
+
+/* レベルリストの項目（タップしやすくする） */
 .db-item { 
-    padding: 10px; border-bottom: 1px solid var(--border); 
-    display: flex; justify-content: space-between; align-items: center; 
-    cursor: pointer; transition: 0.2s;
+    padding: 15px 10px;  /* 上下のパディングを増やしてタップしやすく */
+    border-bottom: 1px solid var(--border); 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    cursor: pointer; 
+    transition: 0.2s;
+    font-size: 1rem;     /* フォントサイズを少し大きく */
 }
+
 .db-item:hover { background: rgba(128,128,128,0.1); }
 
 /* メインパネル (単語一覧) */
@@ -277,9 +288,26 @@ button.action-btn {
     border-radius: 4px; cursor: pointer; 
 }
 
-/* モバイル対応 (レスポンシブ) */
+/* モバイル対応部分の強化 */
 @media (max-width: 600px) {
-    .modal-body { flex-direction: column; }
-    .sidebar { width: 100%; height: 150px; border-right: none; border-bottom: 1px solid var(--border); }
-    .main-panel { padding: 10px; }
+    .modal-body { 
+        flex-direction: column; 
+    }
+    .sidebar { 
+        width: 100%; 
+        height: 160px;   /* 高さを確保 */
+        flex-shrink: 0;  /* 縮まないようにする */
+        border-right: none; 
+        border-bottom: 1px solid var(--border); 
+    }
+    .db-list {
+        /* サイドバー内のリストのみスクロールさせる */
+        overflow-y: auto; 
+        height: calc(100% - 50px); /* ボタン分を引く */
+    }
+    .main-panel { 
+        padding: 10px; 
+        height: 100%;    /* 残りの高さを埋める */
+        overflow: hidden;
+    }
 }
