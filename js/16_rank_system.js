@@ -1,7 +1,7 @@
 /**
- * 16_rank_system.js (v2: 設定連動版)
+ * 16_rank_system.js (v3: デフォルトOFF版)
  * 累計正解数(XP)に基づいて称号を与えるRPG風ランクシステム。
- * 設定画面でオン/オフが可能。
+ * 設定画面でオン/オフが可能。デフォルトはOFFに変更。
  */
 
 (function() {
@@ -10,13 +10,13 @@
     
     const RANKS = [
         { xp: 0,   title: "🌱 Beginner (初心者)", color: "#94a3b8" },
-        { xp: 10,  title: "🥚 Novice (見習い)",   color: "#60a5fa" },
-        { xp: 30,  title: "🛡️ Soldier (戦士)",    color: "#34d399" },
-        { xp: 60,  title: "⚔️ Knight (騎士)",     color: "#f59e0b" },
-        { xp: 100, title: "🧙‍♂️ Wizard (魔導士)",   color: "#a855f7" },
-        { xp: 150, title: "👑 Master (達人)",     color: "#f43f5e" },
-        { xp: 250, title: "🐲 Legend (伝説)",     color: "#ec4899" },
-        { xp: 500, title: "🌌 God (発音神)",      color: "#fbbf24" }
+        { xp: 100,  title: "🥚 Novice (見習い)",   color: "#60a5fa" },
+        { xp: 500,  title: "🛡️ Soldier (戦士)",    color: "#34d399" },
+        { xp: 1000,  title: "⚔️ Knight (騎士)",     color: "#f59e0b" },
+        { xp: 2000, title: "🧙‍♂️ Wizard (魔導士)",   color: "#a855f7" },
+        { xp: 5000, title: "👑 Master (達人)",     color: "#f43f5e" },
+        { xp: 10000, title: "🐲 Legend (伝説)",     color: "#ec4899" },
+        { xp: 100000, title: "🌌 God (発音神)",      color: "#fbbf24" }
     ];
 
     let currentXP = 0;
@@ -72,9 +72,9 @@
         checkbox.id = 'toggle-rank';
         checkbox.style.marginRight = '10px';
         
-        // デフォルトはオン
+        // ★変更点: デフォルトはオフ (saved === null ? false : ...)
         const saved = localStorage.getItem(STORAGE_KEY);
-        checkbox.checked = saved === null ? true : (saved === 'true');
+        checkbox.checked = saved === null ? false : (saved === 'true');
 
         checkbox.onchange = function() {
             localStorage.setItem(STORAGE_KEY, checkbox.checked);
@@ -104,7 +104,8 @@
     // 2. 表示状態の切り替え
     function applyState() {
         const isEnabled = localStorage.getItem(STORAGE_KEY);
-        const shouldShow = isEnabled === null ? true : (isEnabled === 'true'); // デフォルトON
+        // ★変更点: デフォルトはオフ
+        const shouldShow = isEnabled === null ? false : (isEnabled === 'true');
 
         const container = document.getElementById('rank-container');
         
@@ -179,9 +180,6 @@
         const originalUpdateStats = window.updateWordStats;
         window.updateWordStats = function(isCorrect) {
             if(originalUpdateStats) originalUpdateStats(isCorrect);
-
-            // ランクシステム自体がオフでも、裏でXPは貯めるか？
-            // ここでは「表示オフでも経験値は貯まる」仕様にします（再開した時に嬉しいので）。
             
             if(isCorrect) {
                 const oldRank = getRank(currentXP);
@@ -192,7 +190,8 @@
                 
                 // レベルアップ通知は、表示がオンの時だけ出す
                 const isEnabled = localStorage.getItem(STORAGE_KEY);
-                const shouldShow = isEnabled === null ? true : (isEnabled === 'true');
+                // ★変更点: デフォルトOFF
+                const shouldShow = isEnabled === null ? false : (isEnabled === 'true');
 
                 if (shouldShow && newRank.xp > oldRank.xp) {
                     showLevelUp(newRank);
