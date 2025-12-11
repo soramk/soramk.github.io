@@ -6,7 +6,7 @@
 
 (function() {
     // 1. キャッシュ対策用のバージョン番号 (変更があればここを変えるだけで全ファイル更新されます)
-    const APP_VERSION = 'v1.0.1'; 
+    const APP_VERSION = 'v1.1.0'; 
 
     // 2. 読み込むファイルのリスト (順番が重要です)
     const scripts = [
@@ -32,7 +32,8 @@
 
         // --- Extensions ---
         'js/7_extensions.js',
-        'js/8_scoring.js'
+        'js/8_scoring.js',
+        'js/9_overlay_playback.js'
     ];
 
     // 3. 順次読み込み処理 (Recursion to ensure execution order)
