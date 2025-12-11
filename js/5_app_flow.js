@@ -174,7 +174,7 @@ function skipQuestion() {
  * 次の問題へ進む処理
  */
 async function nextQuestion() {
-    console.log("Moving to next question... (v2.0 fixed)");
+    console.log("Moving to next question... (v3.0 UI fix)");
 
     // 1. 進行中の録音/認識プロセスを強制リセット
     if (typeof isRecording !== 'undefined' && isRecording) {
@@ -182,9 +182,7 @@ async function nextQuestion() {
     }
     
     if (typeof stopWebSpeech === 'function') stopWebSpeech();
-    
     if (typeof isRecording !== 'undefined') window.isRecording = false;
-    
     if (typeof updateRecordButtonUI === 'function') updateRecordButtonUI();
 
     // 2. UIのリセット
@@ -216,21 +214,19 @@ async function nextQuestion() {
     // ランダム選択
     const idx = Math.floor(Math.random() * list.length);
     window.currentPair = list[idx];
-
-    // LかRかをランダムに決定
     window.isTargetL = Math.random() < 0.5;
     window.targetObj = window.isTargetL ? window.currentPair.l : window.currentPair.r;
     
-    console.log("New Question Set:", {
-        pair: window.currentPair.l.w + "/" + window.currentPair.r.w,
-        targetIsL: window.isTargetL,
-        targetWord: window.targetObj.w
-    });
-
-    // 4. 発音記号と口の形の更新
+    // 4. 発音記号と口の形のデータ更新（表示・非表示に関わらずデータはセットしておく）
     if (typeof updatePhonemesAndMouth === 'function') {
         updatePhonemesAndMouth(window.currentPair, window.isTargetL);
     }
+
+    // ★追加: 制御したい要素を取得
+    const visualizerBox = document.querySelector('.visualizer-box');
+    const visExplanation = document.getElementById('vis-explanation');
+    const phonemeList = document.getElementById('phoneme-list');
+    const diagramBox = document.querySelector('.diagram-box');
 
     // 5. モードごとの画面表示更新
     const targetEl = document.getElementById('target-word');
@@ -239,16 +235,21 @@ async function nextQuestion() {
     if (window.currentMode === 'listening') {
         // --- Listening Mode ---
         
-        // ★修正: 完全に伏せ字にする（上書きされないようにここで設定）
+        // ★追加: ヒントになる要素を隠す
+        if(visualizerBox) visualizerBox.style.display = 'none';
+        if(visExplanation) visExplanation.style.display = 'none';
+        if(phonemeList) phonemeList.style.display = 'none';
+        if(diagramBox) diagramBox.style.display = 'none';
+
+        // 単語を伏せ字にする
         if(targetEl) {
             targetEl.innerText = "??????";
-            targetEl.classList.remove('blur'); // blurクラスではなくテキスト置換
+            targetEl.classList.remove('blur');
         }
         if(opponentEl) {
             opponentEl.innerText = "??????";
         }
 
-        // ★修正: ボタンに実際の単語を表示
         if(btnL) btnL.innerText = window.currentPair.l.w;
         if(btnR) btnR.innerText = window.currentPair.r.w;
 
@@ -261,6 +262,12 @@ async function nextQuestion() {
     } else {
         // --- Speaking Mode ---
         
+        // ★追加: 隠した要素を再表示する (CSSに合わせて flex/block を指定)
+        if(visualizerBox) visualizerBox.style.display = 'block';
+        if(visExplanation) visExplanation.style.display = 'block';
+        if(phonemeList) phonemeList.style.display = 'flex'; // CSSで flex 指定のため
+        if(diagramBox) diagramBox.style.display = 'flex';   // CSSで flex 指定のため
+
         // 通常の単語表示
         updateWordDisplay();
         if(targetEl) targetEl.classList.remove('blur');
