@@ -6,7 +6,7 @@
 
 (function() {
     // 1. キャッシュ対策用のバージョン番号 (変更があればここを変えるだけで全ファイル更新されます)
-    const APP_VERSION = 'v1.5.0'; 
+    const APP_VERSION = 'v1.6.0'; 
 
     // 2. 読み込むファイルのリスト (順番が重要です)
     const scripts = [
@@ -37,7 +37,8 @@
         'js/10_help_link.js',           // ヘルプリンクの追加
         'js/11_formant_game.js',        // フォルマント（F3）の可視化ゲーム機能
         'js/12_mirror_mode.js',         // Webカメラによる「リアルタイム・ミラーリング」機能
-        'js/13_blitz_mode.js'           // 高速モード（Blitz Mode）ミニマル・ペア・ブリッツ（聴覚特訓）機能
+        'js/13_blitz_mode.js',          // 高速モード（Blitz Mode）ミニマル・ペア・ブリッツ（聴覚特訓）機能
+        'js/14_tongue_twister.js'       // 早口言葉（Tongue Twister）チャレンジ機能
     ];
 
     // 3. 順次読み込み処理 (Recursion to ensure execution order)

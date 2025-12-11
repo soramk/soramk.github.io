@@ -1,7 +1,7 @@
 /**
- * 12_mirror_mode.js (v2: 設定連動版)
+ * 12_mirror_mode.js (v3: 日本語化)
  * 口の形の図解（Diagram）の横に、Webカメラの映像を表示する「ミラーモード」を追加するプラグイン。
- * ★設定画面でオン/オフを切り替え可能にしました。
+ * 設定画面でオン/オフを切り替え可能。
  */
 
 (function() {
@@ -45,18 +45,19 @@
         checkbox.id = 'toggle-mirror-feature';
         checkbox.style.marginRight = '10px';
         
-        // 保存された設定を読み込む (デフォルトは false = オフ)
+        // 保存された設定を読み込む
         const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
         checkbox.checked = isEnabled;
 
         // 切り替え時の動作
         checkbox.onchange = function() {
             localStorage.setItem(STORAGE_KEY, checkbox.checked);
-            applyState(); // 即座に反映
+            applyState();
         };
 
         label.appendChild(checkbox);
-        label.appendChild(document.createTextNode("📷 Enable Mirror Mode (Webcam)"));
+        // ★日本語化
+        label.appendChild(document.createTextNode("📷 ミラーモード (Webカメラ) を有効にする"));
         wrapper.appendChild(label);
         
         // 説明文
@@ -64,7 +65,8 @@
         desc.style.fontSize = '0.8rem';
         desc.style.margin = '5px 0 0 25px';
         desc.style.opacity = '0.7';
-        desc.innerText = "Show a camera view next to the mouth diagram to check your form.";
+        // ★日本語化
+        desc.innerText = "口の形の図解の横に自分のカメラ映像を表示し、フォームを確認できます。";
         wrapper.appendChild(desc);
 
         // 「Playback Speed」設定の前あたりに挿入
@@ -83,14 +85,11 @@
         const container = document.getElementById('mirror-container');
 
         if (isEnabled) {
-            // 有効ならボタンを生成（なければ）して表示
             if (!btn) injectMirrorButton();
             if (btn) btn.style.display = 'inline-block';
         } else {
-            // 無効ならボタンを隠す & カメラ停止
             if (btn) btn.style.display = 'none';
             if (container && container.style.display !== 'none') {
-                // カメラが動いていたら止める
                 const video = document.getElementById('mirror-video');
                 if(video) stopCamera(video);
                 container.style.display = 'none';
@@ -102,12 +101,11 @@
         }
     }
 
-    // 3. ミラーボタンとエリアの生成（ロジックは前回と同じ）
+    // 3. ミラーボタンとエリアの生成
     function injectMirrorButton() {
         const diagramBox = document.querySelector('.diagram-box');
         if (!diagramBox) return;
 
-        // ミラー画面エリア
         if (!document.getElementById('mirror-container')) {
             const mirrorContainer = document.createElement('div');
             mirrorContainer.id = 'mirror-container';
@@ -135,7 +133,6 @@
             diagramBox.appendChild(mirrorContainer);
         }
 
-        // 切替ボタン
         if (!document.getElementById('mirror-toggle-btn')) {
             const toggleBtn = document.createElement('button');
             toggleBtn.id = 'mirror-toggle-btn';
@@ -187,5 +184,4 @@
             video.srcObject = null;
         }
     }
-
 })();

@@ -1,5 +1,5 @@
 /**
- * 13_blitz_mode.js
+ * 13_blitz_mode.js (v2: 日本語化)
  * 制限時間内にL/Rを聞き分ける早押しゲーム「Blitz Mode」を追加するプラグイン。
  * 設定画面でオン/オフが可能。
  */
@@ -54,17 +54,18 @@
         };
 
         label.appendChild(checkbox);
-        label.appendChild(document.createTextNode("⚡ Enable Blitz Mode (Game)"));
+        // ★日本語化
+        label.appendChild(document.createTextNode("⚡ ブリッツモード (早押しゲーム) を有効にする"));
         wrapper.appendChild(label);
 
         const desc = document.createElement('p');
         desc.style.fontSize = '0.8rem';
         desc.style.margin = '5px 0 0 25px';
         desc.style.opacity = '0.7';
-        desc.innerText = "Add a speed-listening game to the Listen tab.";
+        // ★日本語化
+        desc.innerText = "Listenモードに、制限時間内にL/Rを聞き分ける早押しゲームを追加します。";
         wrapper.appendChild(desc);
 
-        // ミラー設定の後ろ、あるいは適当な場所へ
         const mirrorSetting = document.getElementById('setting-mirror-wrapper');
         if(mirrorSetting) {
             mirrorSetting.parentNode.insertBefore(wrapper, mirrorSetting.nextSibling);
@@ -87,12 +88,11 @@
                 btn.id = 'start-blitz-btn';
                 btn.className = 'action-btn';
                 btn.innerText = '⚡ Blitz';
-                btn.style.background = '#f59e0b'; // Amber color
+                btn.style.background = '#f59e0b';
                 btn.style.color = 'white';
-                btn.style.gridColumn = 'span 2'; // 幅広に
+                btn.style.gridColumn = 'span 2';
                 btn.onclick = startBlitzGame;
                 
-                // Nextボタンの前に追加
                 const nextBtn = document.getElementById('next-btn-lst');
                 if(nextBtn) {
                     controls.insertBefore(btn, nextBtn);
@@ -115,19 +115,17 @@
         currentScore = 0;
         let timeLeft = GAME_DURATION;
 
-        // UIをゲームモードに変更
         const container = document.querySelector('.container');
-        const originalContent = container.innerHTML; // 元の画面をバックアップ
         
-        // シンプルなゲーム画面を描画
+        // ★UI日本語化
         container.innerHTML = `
             <div style="padding:20px;">
                 <h2 style="color:#f59e0b; margin:0;">⚡ Blitz Mode</h2>
                 <div style="font-size:3rem; font-weight:bold; margin:20px 0;" id="blitz-timer">${timeLeft}</div>
-                <div style="font-size:1.2rem;">Score: <span id="blitz-score">0</span></div>
+                <div style="font-size:1.2rem;">スコア: <span id="blitz-score">0</span></div>
                 
                 <div style="margin: 30px 0; min-height: 60px; display:flex; justify-content:center; align-items:center;">
-                    <span id="blitz-feedback" style="font-size:2rem;">🔊 Listen!</span>
+                    <span id="blitz-feedback" style="font-size:2rem;">🔊 音声を聞いて...</span>
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -135,15 +133,13 @@
                     <button id="blitz-btn-r" class="choice-btn" style="height:120px;">R</button>
                 </div>
                 
-                <button onclick="window.location.reload()" style="margin-top:20px; background:none; border:none; color:#888; text-decoration:underline;">Quit</button>
+                <button onclick="window.location.reload()" style="margin-top:20px; background:none; border:none; color:#888; text-decoration:underline;">やめる (Quit)</button>
             </div>
         `;
 
-        // L/Rボタンのイベント設定
         document.getElementById('blitz-btn-l').onclick = () => checkBlitzAnswer(true);
         document.getElementById('blitz-btn-r').onclick = () => checkBlitzAnswer(false);
 
-        // タイマースタート
         timerInterval = setInterval(() => {
             timeLeft--;
             const el = document.getElementById('blitz-timer');
@@ -154,7 +150,6 @@
             }
         }, 1000);
 
-        // 最初の問題
         nextBlitzQuestion();
     }
 
@@ -171,15 +166,9 @@
         blitzTargetIsL = Math.random() < 0.5;
         const targetWord = blitzTargetIsL ? blitzPair.l.w : blitzPair.r.w;
 
-        // ボタンのラベル更新 (単語を表示するか、L/Rだけにするかは難易度による。今回はL/Rのみで音に集中させる)
-        // もし単語を表示したい場合は以下をコメントアウト解除
-        // document.getElementById('blitz-btn-l').innerText = `L\n(${blitzPair.l.w})`;
-        // document.getElementById('blitz-btn-r').innerText = `R\n(${blitzPair.r.w})`;
-
-        // 音声再生
         const u = new SpeechSynthesisUtterance(targetWord);
         u.lang = 'en-US';
-        u.rate = window.speechRate || 1.0; // 少し早めでもいいかも
+        u.rate = window.speechRate || 1.0;
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(u);
     }
@@ -193,17 +182,17 @@
         if (isCorrect) {
             currentScore++;
             document.getElementById('blitz-score').innerText = currentScore;
-            fb.innerText = "⭕ Nice!";
+            // ★日本語化
+            fb.innerText = "⭕ 正解!";
             fb.style.color = "var(--success)";
-            // 効果音があれば鳴らす
             if(typeof sfx !== 'undefined' && sfx.correct) sfx.correct();
         } else {
-            fb.innerText = "❌ Oops!";
+            // ★日本語化
+            fb.innerText = "❌ 不正解...";
             fb.style.color = "var(--err)";
             if(typeof sfx !== 'undefined' && sfx.wrong) sfx.wrong();
         }
 
-        // 次の問題へ（少しだけ待つか、即次へ行くか。Blitzなので即次へ）
         setTimeout(nextBlitzQuestion, 200);
     }
 
@@ -212,19 +201,16 @@
         clearInterval(timerInterval);
         
         const container = document.querySelector('.container');
+        // ★UI日本語化
         container.innerHTML = `
             <div style="padding:20px;">
-                <h2 style="margin-bottom:10px;">🏁 Time Up!</h2>
-                <div style="font-size:4rem; font-weight:bold; color:var(--primary);">${score}</div>
-                <p>Correct Answers</p>
+                <h2 style="margin-bottom:10px;">🏁 終了! (Time Up!)</h2>
+                <div style="font-size:4rem; font-weight:bold; color:var(--primary);">${score}問</div>
+                <p>正解しました！</p>
                 <div style="margin-top:30px;">
-                    <button class="action-btn btn-main" onclick="window.location.reload()">Return to Menu</button>
+                    <button class="action-btn btn-main" onclick="window.location.reload()">メニューに戻る</button>
                 </div>
             </div>
         `;
-        
-        // 記録に残すならここで拡張機能(7_extensions.js)を呼んでも良い
-        // if(typeof AppExtension !== 'undefined') AppExtension.logBlitzScore(score);
     }
-
 })();
