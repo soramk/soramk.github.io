@@ -1,192 +1,195 @@
 /**
- * 3_core_logic.js
- * アプリケーションの「データ状態（グローバル変数）」と「起動シーケンス」のみを管理します。
- * ※ 具体的な画面遷移やボタン動作の関数は 2_dom_events.js や 5_app_flow.js に記述されています。
+ * 3_core_logic.js (iOS Native Support Version)
+ * 録音の開始・停止、APIへの送信、結果の処理を行う中核ロジック。
+ * iOS Safariの仕様（バックグラウンド時の挙動、AudioContextの制限）に
+ * 外部パッチなしでネイティブ対応しています。
  */
 
-// --- 1. Global State Definitions (The Single Source of Truth) ---
-// 他のファイルから window.db や window.isRecording としてアクセスされます
-
-// App State
-window.db = {};
-window.currentCategory = 'basic';
-window.currentMode = 'speaking';
-window.currentPair = {}; // {l:{w...}, r:{w...}}
-window.targetObj = {};   // {w: "light", ...}
-window.isTargetL = true; // 正解はLかどうか
-window.streak = 0;
-window.speechRate = 0.8;
-window.currentProvider = 'gemini'; // 'gemini', 'openai', 'web'
-
-// Audio & Recording State
+// グローバル変数（状態管理用）
 window.isRecording = false;
-window.hasSpoken = false;
-window.silenceStart = 0;
 window.mediaRecorder = null;
 window.audioChunks = [];
-window.userAudioBlob = null;
-window.audioCtx = null;
-window.analyser = null;
-window.audioSourceNode = null;
-window.dataArray = null;
-window.canvasCtx = null;
 window.currentStream = null;
+window.userAudioBlob = null; // 録音データを保持（再生・送信に使用）
 
-// Constants
-window.VAD_THRESHOLD = 15;
-window.VAD_SILENCE = 1200;
+// --- メイン: 録音ボタンの動作 ---
+async function toggleRecord() {
+    const btn = document.getElementById('rec-btn');
+    const feedback = document.getElementById('feedback-area');
 
-// Visualizer State
-window.visMode = 'wave'; 
-
-
-// --- 2. Init Logic (Application Entry Point) ---
-
-window.addEventListener('load', async () => {
-    console.log("App initializing...");
-
-    // 1. HTMLテンプレートの注入確認
-    // html_templates.js が既に走っているはずだが、念のため確認
-    if(typeof initHtmlTemplates === 'function' && !document.getElementById('db-manager-modal')) {
-        initHtmlTemplates();
+    // 1. 録音停止処理
+    if (window.isRecording) {
+        stopRecordingProcess();
+        return;
     }
 
-    // 2. データベース(Local Storage)のロード
-    // 2_db_manager.js で定義
-    if(typeof loadDb === 'function') {
-        await loadDb();
-    } else {
-        console.error("loadDb function not found. Check 2_db_manager.js");
+    // 2. 録音開始処理
+    // iOS対策: ユーザーアクション(Click)内で必ずAudioContextを操作する
+    if (!window.audioCtx) {
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+        window.audioCtx = new window.AudioContext();
     }
-    
-    // 3. Canvas(ビジュアライザ)初期化
-    // 1_audio_visuals.js で定義
-    if(typeof initCanvas === 'function') {
-        initCanvas();
-        window.addEventListener('resize', initCanvas);
+    // サスペンド状態なら再開させる
+    if (window.audioCtx.state === 'suspended') {
+        await window.audioCtx.resume();
     }
+
+    feedback.innerText = "Listening...";
+    feedback.className = "feedback";
+    btn.classList.add('recording');
+    btn.innerText = "⏹ Stop";
     
-    // 4. 保存された設定の復元
-    loadSavedSettings();
-    
-    // 5. カテゴリ選択肢の生成
-    if(typeof populateCategorySelect === 'function') {
-        populateCategorySelect(); 
-    }
-    
-    // 6. 最初の問題を表示
-    // 5_app_flow.js で定義
-    if(typeof nextQuestion === 'function') {
-        // カテゴリが空でないか確認してから開始
-        if(window.db && window.db[window.currentCategory] && window.db[window.currentCategory].length > 0) {
-            nextQuestion();
-        } else {
-            console.warn("No data in current category. Please import words.");
-            if(typeof openDbManager === 'function') openDbManager();
+    // 既存の再生ボタンを隠す
+    const replayBtn = document.getElementById('replay-user-btn');
+    if(replayBtn) replayBtn.style.display = 'none';
+    const overlayBtn = document.getElementById('overlay-btn');
+    if(overlayBtn) overlayBtn.style.display = 'none';
+
+    window.audioChunks = [];
+    window.isRecording = true;
+
+    try {
+        // マイク取得
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        window.currentStream = stream;
+
+        // ビジュアライザー起動 (1_audio_visuals.js)
+        if (typeof setupVisualizer === 'function') {
+            setupVisualizer(stream);
         }
-    } else {
-        console.error("nextQuestion function not found. Check 5_app_flow.js");
-    }
-});
 
+        // MediaRecorder設定 (Safari互換性のためmimeType指定なしを推奨、自動判別に任せる)
+        const options = {};
+        // iOS Safariは mp4/aac か wav が基本だが、指定しないのが一番安全
+        
+        window.mediaRecorder = new MediaRecorder(stream, options);
 
-// --- 3. Helper Functions (Settings Loader) ---
+        window.mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) window.audioChunks.push(e.data);
+        };
 
-function loadSavedSettings() {
-    // プロバイダー設定
-    const p = localStorage.getItem('lr_provider');
-    if(p) window.currentProvider = p;
-    
-    // APIキー復元
-    const kGemini = localStorage.getItem('gemini_key');
-    const kOpenAI = localStorage.getItem('openai_key');
-    const rate = localStorage.getItem('lr_rate');
+        window.mediaRecorder.onstop = async () => {
+            // 録音終了後の処理
+            handleRecordingStop();
+        };
 
-    const elKeyG = document.getElementById('api-key-gemini');
-    const elKeyO = document.getElementById('api-key-openai');
-    const elProv = document.getElementById('ai-provider');
-    const elRate = document.getElementById('speech-rate');
-    const elRateVal = document.getElementById('rate-val');
-    
-    if(elKeyG) elKeyG.value = kGemini || '';
-    if(elKeyO) elKeyO.value = kOpenAI || '';
-    if(elProv) {
-        elProv.value = window.currentProvider;
-        // UIの表示切り替え (2_dom_events.js の関数)
-        if(typeof toggleProviderSettings === 'function') toggleProviderSettings(); 
-    }
-    
-    if(rate) {
-        window.speechRate = parseFloat(rate);
-        if(elRate) elRate.value = window.speechRate;
-        if(elRateVal) elRateVal.innerText = window.speechRate;
-    }
-    
-    // Geminiモデルリスト取得 (APIキーがある場合のみ)
-    if(window.currentProvider === 'gemini' && kGemini && typeof fetchModels === 'function') {
-        fetchModels(true); // silent mode
+        window.mediaRecorder.start();
+
+    } catch (err) {
+        console.error("Mic Access Error:", err);
+        alert("マイクにアクセスできませんでした。\n設定でブラウザのマイク権限を確認してください。");
+        stopRecordingProcess(true); // 強制リセット
     }
 }
 
-// 設定保存ロジック (2_dom_events.js または settings modal から呼ばれる)
-window.saveSettings = function() {
-    const elProv = document.getElementById('ai-provider');
-    if(elProv) window.currentProvider = elProv.value;
-    localStorage.setItem('lr_provider', window.currentProvider);
-
-    const kGemini = document.getElementById('api-key-gemini').value;
-    const kOpenAI = document.getElementById('api-key-openai').value;
+// --- 内部関数: 録音停止プロセス ---
+function stopRecordingProcess(forceReset = false) {
+    const btn = document.getElementById('rec-btn');
     
-    if(kGemini) localStorage.setItem('gemini_key', kGemini);
-    if(kOpenAI) localStorage.setItem('openai_key', kOpenAI);
+    window.isRecording = false;
+    btn.classList.remove('recording');
+    btn.innerText = "🎤 Start"; // 一旦戻す、処理中はProcessingになる
 
-    const elRate = document.getElementById('speech-rate');
-    if(elRate) {
-        window.speechRate = parseFloat(elRate.value);
-        localStorage.setItem('lr_rate', window.speechRate);
+    // Recorder停止
+    if (window.mediaRecorder && window.mediaRecorder.state !== 'inactive') {
+        window.mediaRecorder.stop();
     }
-    
-    // 設定画面を閉じる (2_dom_events.js の関数)
-    if(typeof closeSettings === 'function') closeSettings();
-    
-    // Geminiモデル更新
-    if(window.currentProvider === 'gemini' && kGemini && typeof fetchModels === 'function') {
-        fetchModels(true);
-    }
-    
-    alert("Settings Saved!");
-};
 
-// 単語統計更新ヘルパー (DB操作に近いのでここに配置、または 2_db_manager.js でも可)
-window.updateWordStats = function(isCorrect) {
-    if (!window.currentPair) return;
+    // マイクの物理停止 (iOSのオレンジ点灯を消すため)
+    if (window.currentStream) {
+        window.currentStream.getTracks().forEach(track => track.stop());
+        window.currentStream = null;
+    }
+
+    // 強制リセット時（エラー時など）
+    if (forceReset) {
+        const feedback = document.getElementById('feedback-area');
+        if(feedback) feedback.innerText = "Ready";
+    }
+}
+
+// --- 内部関数: 録音データ確定後の処理 ---
+async function handleRecordingStop() {
+    // 録音データ生成
+    // iOS Safari対策: typeを指定せずブラウザのデフォルトに任せるのが安全
+    const blob = new Blob(window.audioChunks, { type: window.mediaRecorder.mimeType || 'audio/webm' });
+    window.userAudioBlob = blob; // 保存（再生用）
+
+    // UI更新
+    const btn = document.getElementById('rec-btn');
+    const feedback = document.getElementById('feedback-area');
     
-    if (!window.currentPair.streak) window.currentPair.streak = 0;
+    btn.classList.remove('recording');
+    btn.classList.add('processing'); // 処理中表示
+    btn.innerText = "⏳ Judging...";
     
-    if (isCorrect) {
-        window.currentPair.streak += 1;
-        // 正解数に応じて復習間隔を空ける (簡易的なSRSロジック)
-        const bonusTime = 60 * 1000 * Math.pow(4, window.currentPair.streak); 
-        window.currentPair.nextReview = Date.now() + bonusTime;
+    // 再生ボタン表示
+    const replayBtn = document.getElementById('replay-user-btn');
+    if(replayBtn) {
+        replayBtn.style.display = 'block';
+        replayBtn.onclick = () => {
+            const audio = new Audio(URL.createObjectURL(blob));
+            audio.play();
+        };
+    }
+
+    // 音声認識・採点処理へ (4_api_client.jsへ委譲)
+    if (typeof processAudioWithAI === 'function') {
+        await processAudioWithAI(blob);
     } else {
-        window.currentPair.streak = 0;
-        window.currentPair.nextReview = Date.now();
+        console.error("AI Processor not found.");
+        feedback.innerText = "Error: AI module missing.";
+        btn.classList.remove('processing');
+        btn.innerText = "🎤 Start";
     }
-    
-    // DB保存 (2_db_manager.js)
-    if(typeof saveDb === 'function') saveDb();
-};
+}
 
-// モデル音声再生ヘルパー (1_audio_visuals.js にあるべきだが、単純なのでここでも可)
-window.speakModel = function() { 
-    if(!window.targetObj || !window.targetObj.w) return;
-    
-    // Web Speech API Synthesis
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); // 前のをキャンセル
-        const u = new SpeechSynthesisUtterance(window.targetObj.w);
-        u.lang = 'en-US';
-        u.rate = window.speechRate || 0.8;
-        window.speechSynthesis.speak(u);
+// --- API処理完了後のコールバック (4_api_client.jsから呼ばれる) ---
+function updateRecordButtonUI() {
+    const btn = document.getElementById('rec-btn');
+    if(btn) {
+        btn.classList.remove('recording');
+        btn.classList.remove('processing');
+        btn.innerText = "🎤 Start";
     }
-};
+}
+
+// --- iOS専用: バックグラウンド移行時の完全クリーンアップ ---
+// 18_ios_mic_fix.js の役割をここに取り込みます
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        // バックグラウンドに行ったら、録音中であろうとなかろうとリソースを破棄
+        forceCleanupAudio();
+    }
+});
+
+function forceCleanupAudio() {
+    console.log("[Core] App hidden. Releasing audio resources...");
+
+    // 1. 録音停止
+    if (window.isRecording) {
+        stopRecordingProcess(true);
+    }
+
+    // 2. マイクの念入りな停止
+    if (window.currentStream) {
+        window.currentStream.getTracks().forEach(track => {
+            track.stop();
+            track.enabled = false;
+        });
+        window.currentStream = null;
+    }
+
+    // 3. AudioContextの一時停止 (closeではなくsuspendで再開可能にしておく)
+    // ※ iOSでは close してしまうと再生成が必要になるが、
+    // toggleRecord 内で new AudioContext() を呼ぶガードを入れているので close でも良い。
+    // ここでは安全に suspend に留める（オレンジ点が消えない場合は close に変更可）
+    if (window.audioCtx && window.audioCtx.state === 'running') {
+        window.audioCtx.suspend();
+    }
+    
+    // 4. マスコットやオーバーレイ用Contextも停止
+    if (window.overlayCtx) {
+        window.overlayCtx.suspend(); 
+    }
+}

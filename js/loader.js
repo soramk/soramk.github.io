@@ -6,7 +6,7 @@
 
 (function() {
     // 1. キャッシュ対策用のバージョン番号 (変更があればここを変えるだけで全ファイル更新されます)
-    const APP_VERSION = 'v2.4.0'; 
+    const APP_VERSION = 'v3.0.0'; 
 
     // 2. 読み込むファイルのリスト (順番が重要です)
     const scripts = [
@@ -42,7 +42,7 @@
         'js/15_celebration.js',         // 高得点や連勝時に紙吹雪を舞わせる演出機能
         'js/16_rank_system.js',         // RPG風ランクシステム機能
         'js/17_settings_organizer.js',  // 設定画面の整理整頓機能
-        'js/18_ios_mic_fix.js',         // iOS向けマイク解放パッチ
+        // 'js/18_ios_mic_fix.js',      // iOS向けマイク問題修正（現在は3_core_logic.jsに統合）
         'js/19_katakana_hint.js',       // L/R対応カタカナ自動生成プラグイン
         'js/21_sentence_mode.js',       // センテンス（短文）シャドーイング機能
         'js/22_reaction_mascot.js',     // 反応するマスコット機能
