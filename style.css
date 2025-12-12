@@ -365,3 +365,57 @@ button.action-btn {
     background: var(--primary); color: white; border: none; 
     border-radius: 4px; cursor: pointer; 
 }
+
+/* =========================================
+   iOS & Mobile Scroll Fixes (根本解決用)
+   ========================================= */
+
+/* 1. 画面全体の枠組みを固定 */
+html {
+    width: 100vw;              /* 横幅をビューポートに固定 */
+    height: 100%;              /* 高さも固定 */
+    overflow-x: hidden;        /* 横スクロール絶対禁止 */
+    overscroll-behavior: none; /* 全方向のバウンス(ビヨーン)禁止 */
+    -webkit-text-size-adjust: 100%;
+}
+
+/* 2. ボディの挙動制御 */
+body {
+    width: 100vw;
+    min-height: 100%;
+    overflow-x: hidden;        /* 横スクロール絶対禁止 */
+    overflow-y: auto;          /* 縦は許可 */
+    overscroll-behavior: none; /* バウンス禁止 */
+    -webkit-overflow-scrolling: touch; /* 滑らかな慣性スクロール */
+    position: relative;
+    
+    /* ピンチズームや斜めスクロールによる横ズレを無効化 */
+    touch-action: pan-y; 
+}
+
+/* 3. 全要素のはみ出し防止 (ボックスサイズ計算の統一) */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+/* 4. モーダルが開いた時のBody固定用クラス (JSで付与) */
+body.ios-locked {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    left: 0;
+    top: 0;
+}
+
+/* 5. モーダル内のスクロールエリア設定 */
+.modal-content div[style*="overflow"],
+.scrollable-table,
+.db-list,
+.history-list {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain; /* 内部スクロールが親(画面全体)を揺らさない */
+    overflow-x: hidden;
+    max-width: 100%;
+    touch-action: pan-y;
+}
