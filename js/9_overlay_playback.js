@@ -1,14 +1,17 @@
 /**
- * 9_overlay_playback.js (v2: 音量ブースト版)
- * 自分の声とモデル音声（TTS）を同時に再生し、比較・矯正を行うプラグイン。
- * ★自分の声が小さい場合に備え、GainNodeを使って音量を増幅(ブースト)させます。
+ * 9_overlay_playback.js (v3: 安定化修正版)
+ * 自分の声とモデル音声（TTS）を同時に再生するプラグイン。
+ * ・AudioContextを使い回すことで「2回目以降音が小さくなる」バグを修正
+ * ・タイミング調整を廃止し、モデル音声が再生されない問題を解決
  */
 
 (function() {
-    // 増幅率 (1.0 = そのまま, 2.0 = 2倍, 3.0 = 3倍)
-    // スマホのマイク入力は小さいことが多いので大きめに設定
-    const USER_VOLUME_GAIN = 3.0; 
-    const MODEL_VOLUME = 0.8;
+    // 音量設定
+    const USER_VOLUME_GAIN = 3.0; // ユーザー音声を3倍に増幅
+    const MODEL_VOLUME = 1.0;     // モデル音声も最大音量で
+
+    // 増幅器（AudioContext）は1つだけ作って使い回す（リソース枯渇防止）
+    let overlayCtx = null;
 
     // ボタンを注入する処理
     function injectOverlayButton() {
@@ -48,47 +51,51 @@
         }
         if (!window.targetObj || !window.targetObj.w) return;
 
-        // --- A. ユーザー音声 (AudioContextで増幅再生) ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // --- 1. 増幅器 (AudioContext) の準備 ---
+        if (!overlayCtx) {
+            overlayCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
         
-        try {
-            // BlobをArrayBufferに変換してデコード
-            const arrayBuffer = await window.userAudioBlob.arrayBuffer();
-            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        // サスペンド状態なら叩き起こす (iOS対策)
+        if (overlayCtx.state === 'suspended') {
+            await overlayCtx.resume();
+        }
 
-            // ソースノード作成
-            const source = audioCtx.createBufferSource();
+        // --- 2. モデル音声 (TTS) の再生 ---
+        // ★修正: 遅延(setTimeout)を廃止し、クリック直後に実行させることでブロックを防ぐ
+        window.speechSynthesis.cancel(); // 前の読み上げをキャンセル
+        
+        const modelUtterance = new SpeechSynthesisUtterance(window.targetObj.w);
+        modelUtterance.lang = 'en-US';
+        modelUtterance.rate = window.speechRate || 0.8;
+        modelUtterance.volume = MODEL_VOLUME; 
+        
+        // 再生実行
+        window.speechSynthesis.speak(modelUtterance);
+
+        // --- 3. ユーザー音声 (増幅再生) ---
+        try {
+            const arrayBuffer = await window.userAudioBlob.arrayBuffer();
+            // デコードは毎回行う必要がある（BufferSourceは使い捨てのため）
+            const audioBuffer = await overlayCtx.decodeAudioData(arrayBuffer);
+
+            const source = overlayCtx.createBufferSource();
             source.buffer = audioBuffer;
 
-            // ゲインノード (音量増幅) 作成
-            const gainNode = audioCtx.createGain();
-            gainNode.gain.value = USER_VOLUME_GAIN; // ★ここで音量を3倍にする
+            const gainNode = overlayCtx.createGain();
+            gainNode.gain.value = USER_VOLUME_GAIN; // 音量ブースト
 
-            // 接続: Source -> Gain -> Speaker
             source.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
+            gainNode.connect(overlayCtx.destination);
 
-            // 再生開始
             source.start(0);
 
         } catch (e) {
-            console.error("Audio Boost Error:", e);
-            // エラー時はフォールバックとして通常の再生を行う
+            console.error("Audio Playback Error:", e);
+            // エラー時は通常のAudioタグでフォールバック再生
             const simpleAudio = new Audio(URL.createObjectURL(window.userAudioBlob));
-            simpleAudio.volume = 1.0;
             simpleAudio.play();
         }
-
-        // --- B. モデル音声 (TTS) ---
-        // ユーザーの声と被りすぎないよう、わずかに遅らせて再生
-        setTimeout(() => {
-            window.speechSynthesis.cancel();
-            const modelUtterance = new SpeechSynthesisUtterance(window.targetObj.w);
-            modelUtterance.lang = 'en-US';
-            modelUtterance.rate = window.speechRate || 0.8;
-            modelUtterance.volume = MODEL_VOLUME; 
-            window.speechSynthesis.speak(modelUtterance);
-        }, 100);
     }
 
     window.addEventListener('load', () => {
