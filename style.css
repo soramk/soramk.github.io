@@ -1,4 +1,6 @@
-/* --- Base Variables & Reset --- */
+/* =========================================
+   1. Base Variables & Reset
+   ========================================= */
 :root { 
     --primary: #2563eb; 
     --accent: #0ea5e9; 
@@ -17,24 +19,66 @@ body.dark-mode {
     --card: #1e293b; 
 }
 
+/* 全要素のボックスサイズ計算を統一 (はみ出し防止) */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+/* --- iOS & Mobile Scroll Fixes (根本対策・統合済み) --- */
+html {
+    width: 100vw;              /* 横幅を画面に固定 */
+    height: 100%;              /* 高さも固定 */
+    overflow-x: hidden;        /* 横スクロール絶対禁止 */
+    overscroll-behavior: none; /* 全方向のバウンス(ビヨーン)禁止 */
+    -webkit-text-size-adjust: 100%;
+}
+
 body { 
-    /* ★修正: 元のフォント指定に戻しました */
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
     background: var(--bg); 
     color: var(--text); 
+    
+    /* レイアウトとサイズ */
+    width: 100vw;
+    min-height: 100dvh; /* Mobile Safariのアドレスバー対策 */
+    margin: 0;
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    
+    /* スクロール挙動制御 */
+    overflow-x: hidden;        /* 横スクロール絶対禁止 */
+    overflow-y: auto;          /* 縦は許可 */
+    overscroll-behavior: none; /* バウンス禁止 */
+    -webkit-overflow-scrolling: touch; /* 滑らかなスクロール */
+    position: relative;
+    
+    /* ピンチズームや斜め移動による横ズレ防止 */
+    touch-action: pan-y; 
+
     /* iPhone Safe Area対応 */
     padding: 10px;
     padding-top: env(safe-area-inset-top, 10px);
     padding-bottom: env(safe-area-inset-bottom, 10px);
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    margin: 0; 
-    transition: 0.3s;
-    min-height: 100dvh; /* Mobile Safariのアドレスバー対策 */
-    box-sizing: border-box;
+    
+    /* タップ時のハイライト色を消す */
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.3s, color 0.3s;
 }
 
+/* モーダルが開いた時のBody固定用クラス (JSで付与) */
+body.ios-locked {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    left: 0;
+    top: 0;
+}
+
+/* =========================================
+   2. Layout Components
+   ========================================= */
 .container { 
     background: var(--card); 
     padding: 15px; 
@@ -43,21 +87,12 @@ body {
     width: 100%; 
     max-width: 600px; 
     text-align: center; 
-    box-sizing: border-box; 
     position: relative; 
     z-index: 10; 
     margin-bottom: 20px; 
 }
 
-/* --- Animations --- */
-@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
-@keyframes pop { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-
-.shake-anim { animation: shake 0.4s; border: 2px solid var(--err); }
-.pop-anim { animation: pop 0.3s; border: 2px solid var(--success); }
-
-/* --- Header & Navigation --- */
+/* --- Header --- */
 .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .app-title { font-weight: 800; font-size: 1.2rem; color: var(--primary); margin: 0; }
 .header-tools { display: flex; gap: 8px; }
@@ -71,7 +106,7 @@ body {
 
 .sub-header { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; margin-bottom: 10px; }
 
-/* ▼▼▼ モード切替ボタンのスタイル（active修正済み） ▼▼▼ */
+/* --- Mode Toggle --- */
 .mode-toggle button { 
     padding: 6px 12px; 
     border-radius: 16px; 
@@ -84,7 +119,7 @@ body {
     transition: background 0.3s, color 0.3s;
 }
 
-/* activeクラスがついた時に強制的に色を変える */
+/* Active State Override */
 .mode-toggle button.active,
 #tab-speak.active,
 #tab-listen.active { 
@@ -92,7 +127,6 @@ body {
     color: white !important; 
     border-color: var(--primary) !important; 
 }
-/* ▲▲▲ 修正箇所ここまで ▲▲▲ */
 
 select { 
     padding: 6px; border-radius: 8px; background: rgba(128,128,128,0.1); 
@@ -105,6 +139,10 @@ select {
     padding: 8px; border-radius: 8px; color: var(--text); 
 }
 .flow-options label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+
+/* =========================================
+   3. Main Features
+   ========================================= */
 
 /* --- Visualizer --- */
 .visualizer-box { 
@@ -127,7 +165,7 @@ canvas { display: block; width: 100%; height: 100%; }
 }
 .sub-text { font-size: 0.9rem; opacity: 0.7; margin-bottom: 10px; }
 
-/* --- Speaking Tools --- */
+/* --- Phonetics & Diagram --- */
 .phoneme-container { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; min-height: 30px; }
 .phoneme-btn { 
     background: rgba(128,128,128,0.1); border: 1px solid rgba(128,128,128,0.3); 
@@ -156,7 +194,7 @@ button.action-btn {
 .btn-skip { background: rgba(128,128,128,0.1); border: 1px solid rgba(128,128,128,0.3); }
 
 .btn-main { background: var(--primary); color: white; }
-.btn-primary { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; } /* Alias for modal */
+.btn-primary { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; }
 .btn-danger { background: var(--err); color: white; border: none; padding: 4px 8px; border-radius: 4px; }
 
 .btn-main.processing { background: #fbbf24; color: #78350f; pointer-events: none; }
@@ -189,7 +227,19 @@ button.action-btn {
 .res-ok { color: var(--success); font-weight: bold; } 
 .res-ng { color: var(--err); font-weight: bold; }
 
-/* --- Overlays & Modals (General) --- */
+/* =========================================
+   4. Animations
+   ========================================= */
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+@keyframes pop { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+.shake-anim { animation: shake 0.4s; border: 2px solid var(--err); }
+.pop-anim { animation: pop 0.3s; border: 2px solid var(--success); }
+
+/* =========================================
+   5. Modals & Overlays
+   ========================================= */
 #start-overlay { 
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
     background: rgba(0,0,0,0.85); z-index: 999; display: flex; 
@@ -202,213 +252,24 @@ button.action-btn {
     font-weight: bold; box-shadow: 0 0 15px var(--primary); 
 }
 
-/* 汎用モーダル (設定画面など) */
+/* General Modal */
 .modal, .modal-overlay { 
     display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
     background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; 
-    justify-content: center; backdrop-filter: blur(2px); 
+    justify-content: center; backdrop-filter: blur(2px);
+    
+    /* モーダル背景でのスクロール禁止 */
+    touch-action: none; 
+    overscroll-behavior: none;
 }
+
 .modal-content { 
     background: var(--card); padding: 20px; border-radius: 12px; 
     width: 90%; max-width: 500px; display: flex; flex-direction: column; 
     max-height: 90vh; color: var(--text); box-shadow: 0 10px 25px rgba(0,0,0,0.3);
 }
-.modal-header { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 10px; margin-bottom: 10px; }
-.modal-header h3 { margin: 0; }
-.btn-close { border: none; background: none; font-size: 1.5rem; color: var(--text); cursor: pointer; }
 
-/* モーダル全体の枠組み（PC・スマホ共通） */
-.modal-content.db-manager-layout {
-    width: 95%;              /* モバイルで見やすいよう幅を広げる */
-    max-width: 900px;
-    height: 90dvh;           /* dvh: アドレスバーを考慮した動的な高さ */
-    max-height: 900px;
-    padding: 0;
-    overflow: hidden;        /* モーダル自体はスクロールさせず、中身をスクロール */
-    display: flex;
-    flex-direction: column;
-}
-
-/* モーダルの中身（ヘッダーを除く本体部分） */
-.modal-body {
-    display: flex;
-    flex: 1;                 /* 残りの高さを全て使う */
-    overflow: hidden;        /* はみ出し防止 */
-    height: 100%;
-}
-
-/* --- 左サイドバー（レベル一覧） --- */
-.sidebar {
-    width: 240px;
-    background: rgba(128,128,128,0.05);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    padding: 10px;
-    box-sizing: border-box;
-}
-
-.sidebar-header {
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid var(--border);
-}
-
-.db-list { 
-    list-style: none; 
-    padding: 0; 
-    margin: 0; 
-    overflow-y: auto;        /* リストが多い場合はスクロール */
-    flex: 1;                 /* 領域いっぱいに広げる */
-    text-align: left; 
-}
-
-.db-item { 
-    padding: 12px 10px;      /* タップしやすいよう広めに */
-    border-bottom: 1px solid var(--border); 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    cursor: pointer; 
-    transition: background 0.2s;
-    font-size: 1rem;         /* 文字サイズ確保 */
-}
-.db-item:hover { background: rgba(128,128,128,0.1); }
-.db-item:active { background: rgba(128,128,128,0.2); }
-
-/* --- 右メインパネル（単語一覧） --- */
-.main-panel {
-    flex: 1;                 /* 残りの幅を埋める */
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;        /* 内部スクロールのため */
-    background: var(--card);
-}
-
-.panel-header {
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center;
-    margin-bottom: 10px; 
-    border-bottom: 2px solid var(--border);
-    padding-bottom: 10px;
-    min-height: 40px;
-}
-
-/* テーブル部分をスクロール可能にする */
-.scrollable-table {
-    flex: 1;                 /* パネル内の残りの高さを埋める */
-    overflow-y: auto;        /* 縦スクロール有効化 */
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 5px;
-    background: rgba(255,255,255,0.02);
-}
-
-/* --- 📱 スマートフォン向け最適化 (600px以下) --- */
-@media (max-width: 600px) {
-    /* レイアウトを縦並びに変更 */
-    .modal-body { 
-        flex-direction: column; 
-    }
-
-    /* 1. レベル一覧（上段） */
-    .sidebar { 
-        width: 100%; 
-        height: 35%;         /* 画面の35%をレベル選択に使用 */
-        border-right: none; 
-        border-bottom: 2px solid var(--border); 
-        padding: 5px 10px;
-    }
-
-    .sidebar-header h4 {
-        font-size: 0.9rem;
-        margin: 5px 0;
-    }
-    
-    /* リスト項目を少しコンパクトにしつつ押しやすく */
-    .db-item {
-        padding: 10px 8px;
-        font-size: 0.95rem;
-    }
-
-    /* 2. 単語リスト（下段） */
-    .main-panel { 
-        width: 100%;
-        height: 65%;         /* 残りの65%を単語リストに使用 */
-        padding: 10px; 
-        box-sizing: border-box;
-    }
-
-    .panel-header {
-        flex-wrap: wrap;     /* ボタンが多い場合に折り返す */
-        gap: 5px;
-    }
-    
-    /* ボタン類の調整 */
-    #level-actions button, 
-    #word-actions button {
-        padding: 8px 12px;   /* ボタンを大きく */
-        font-size: 0.85rem;
-    }
-    
-    /* テーブルの行間を広げる */
-    #word-table-container table td {
-        padding: 12px 5px !important;
-    }
-}
-
-/* ユーティリティ */
-.btn-small { 
-    padding: 4px 8px; font-size: 0.75rem; 
-    background: var(--primary); color: white; border: none; 
-    border-radius: 4px; cursor: pointer; 
-}
-
-/* =========================================
-   iOS & Mobile Scroll Fixes (根本解決用)
-   ========================================= */
-
-/* 1. 画面全体の枠組みを固定 */
-html {
-    width: 100vw;              /* 横幅をビューポートに固定 */
-    height: 100%;              /* 高さも固定 */
-    overflow-x: hidden;        /* 横スクロール絶対禁止 */
-    overscroll-behavior: none; /* 全方向のバウンス(ビヨーン)禁止 */
-    -webkit-text-size-adjust: 100%;
-}
-
-/* 2. ボディの挙動制御 */
-body {
-    width: 100vw;
-    min-height: 100%;
-    overflow-x: hidden;        /* 横スクロール絶対禁止 */
-    overflow-y: auto;          /* 縦は許可 */
-    overscroll-behavior: none; /* バウンス禁止 */
-    -webkit-overflow-scrolling: touch; /* 滑らかな慣性スクロール */
-    position: relative;
-    
-    /* ピンチズームや斜めスクロールによる横ズレを無効化 */
-    touch-action: pan-y; 
-}
-
-/* 3. 全要素のはみ出し防止 (ボックスサイズ計算の統一) */
-*, *::before, *::after {
-    box-sizing: border-box;
-}
-
-/* 4. モーダルが開いた時のBody固定用クラス (JSで付与) */
-body.ios-locked {
-    position: fixed;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    left: 0;
-    top: 0;
-}
-
-/* 5. モーダル内のスクロールエリア設定 */
+/* スクロールエリア (設定画面など) の制御 */
 .modal-content div[style*="overflow"],
 .scrollable-table,
 .db-list,
@@ -418,4 +279,52 @@ body.ios-locked {
     overflow-x: hidden;
     max-width: 100%;
     touch-action: pan-y;
+}
+
+.modal-header { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 10px; margin-bottom: 10px; }
+.modal-header h3 { margin: 0; }
+.btn-close { border: none; background: none; font-size: 1.5rem; color: var(--text); cursor: pointer; }
+
+/* --- DB Manager Specific Layout --- */
+.modal-content.db-manager-layout {
+    width: 95%; max-width: 900px; height: 90dvh; max-height: 900px;
+    padding: 0; overflow: hidden; display: flex; flex-direction: column;
+}
+.modal-body { display: flex; flex: 1; overflow: hidden; height: 100%; }
+
+/* Sidebar (Level List) */
+.sidebar {
+    width: 240px; background: rgba(128,128,128,0.05); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 10px;
+}
+.sidebar-header { margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+.db-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; text-align: left; }
+.db-item { 
+    padding: 12px 10px; border-bottom: 1px solid var(--border); 
+    display: flex; justify-content: space-between; align-items: center; 
+    cursor: pointer; transition: background 0.2s; font-size: 1rem; 
+}
+.db-item:hover { background: rgba(128,128,128,0.1); }
+.db-item:active { background: rgba(128,128,128,0.2); }
+
+/* Main Panel (Word List) */
+.main-panel { flex: 1; padding: 15px; display: flex; flex-direction: column; overflow: hidden; background: var(--card); }
+.panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 2px solid var(--border); padding-bottom: 10px; min-height: 40px; }
+.scrollable-table { flex: 1; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 5px; background: rgba(255,255,255,0.02); }
+
+.btn-small { 
+    padding: 4px 8px; font-size: 0.75rem; background: var(--primary); 
+    color: white; border: none; border-radius: 4px; cursor: pointer; 
+}
+
+/* --- Mobile Optimization (DB Manager) --- */
+@media (max-width: 600px) {
+    .modal-body { flex-direction: column; }
+    .sidebar { width: 100%; height: 35%; border-right: none; border-bottom: 2px solid var(--border); padding: 5px 10px; }
+    .sidebar-header h4 { font-size: 0.9rem; margin: 5px 0; }
+    .db-item { padding: 10px 8px; font-size: 0.95rem; }
+    .main-panel { width: 100%; height: 65%; padding: 10px; }
+    .panel-header { flex-wrap: wrap; gap: 5px; }
+    #level-actions button, #word-actions button { padding: 8px 12px; font-size: 0.85rem; }
+    #word-table-container table td { padding: 12px 5px !important; }
 }
