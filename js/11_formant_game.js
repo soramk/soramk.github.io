@@ -1,30 +1,23 @@
 /**
- * 11_formant_game.js (v2: 設定連動 & 日本語化)
- * L/Rの違い（F3フォルマント）を可視化する「F3 Game」モードを追加するプラグイン。
- * 設定画面でオン/オフが可能。
- * 既存の visualize 関数を安全に拡張（元の表示を壊さない設計）。
+ * 11_formant_game.js (v3: F3単独モード版)
+ * 設定で有効にすると、ビジュアライザーを「F3ゲーム専用」に固定します。
+ * 他の波形（Wave/Spectrogram）への切り替えは無効化されます。
  */
 
 (function() {
     const STORAGE_KEY = 'lr_f3game_enabled';
     const GAME_MODE_NAME = 'formant_game';
-    
-    // F3の検出範囲 (Hz)
     const FREQ_MIN = 1200;
     const FREQ_MAX = 3500;
 
-    // 元の関数を退避
     const originalToggleVisMode = window.toggleVisMode;
     const originalVisualize = window.visualize;
 
-    // --- 初期化 ---
     window.addEventListener('load', () => {
-        setTimeout(() => {
-            injectSettingsToggle();
-        }, 800);
+        setTimeout(injectSettingsToggle, 800);
     });
 
-    // 1. 設定画面にスイッチを追加
+    // 1. 設定画面
     function injectSettingsToggle() {
         const settingsBody = document.querySelector('#settings-modal .modal-content div[style*="overflow"]');
         if (!settingsBody || document.getElementById('setting-f3game-wrapper')) return;
@@ -49,58 +42,51 @@
         checkbox.id = 'toggle-f3game-feature';
         checkbox.style.marginRight = '10px';
         
-        // デフォルトはオフにしておく（または好みでオン）
         const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
         checkbox.checked = isEnabled;
 
         checkbox.onchange = function() {
             localStorage.setItem(STORAGE_KEY, checkbox.checked);
-            // もし現在ゲームモード中にオフにされたら、Waveに戻すなどの処理が必要だが、
-            // 次回の切り替えから反映されれば十分なので今回はスキップ
+            // 設定変更時、即座にモードを反映
+            if (checkbox.checked) {
+                window.visMode = GAME_MODE_NAME;
+                updateGameExplanation();
+            } else {
+                window.visMode = 'wave';
+                if(typeof updateVisExplanation === 'function') updateVisExplanation();
+            }
         };
 
         label.appendChild(checkbox);
-        label.appendChild(document.createTextNode("🎯 F3ゲーム (可視化トレーニング) を有効にする"));
+        label.appendChild(document.createTextNode("🎯 F3ゲーム (これのみ表示)"));
         wrapper.appendChild(label);
 
         const desc = document.createElement('p');
         desc.style.fontSize = '0.8rem';
         desc.style.margin = '5px 0 0 25px';
         desc.style.opacity = '0.7';
-        desc.innerText = "ビジュアライザーに、舌の位置(フォルマント)を可視化してゲーム感覚で調整するモードを追加します。";
+        desc.innerText = "有効にすると、ビジュアライザーがF3ゲーム専用になり、他の波形は表示されなくなります。";
         wrapper.appendChild(desc);
 
-        // 挿入場所: Blitz設定の前あたり
         const blitzSetting = document.getElementById('setting-blitz-wrapper');
         if(blitzSetting) {
-            blitzSetting.parentNode.insertBefore(wrapper, blitzSetting.nextSibling); // Blitzの後ろ
+            blitzSetting.parentNode.insertBefore(wrapper, blitzSetting.nextSibling);
         } else {
             settingsBody.appendChild(wrapper);
         }
     }
 
-    // --- 2. モード切替ロジックの拡張 ---
+    // --- 2. モード切替の無効化 (F3固定) ---
     
     window.toggleVisMode = function() {
         const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
 
-        // サイクル: wave -> spectrogram -> frequency -> [GAME if enabled] -> wave
-        if (window.visMode === 'frequency') {
-            if (isEnabled) {
-                // 有効ならゲームモードへ
-                window.visMode = GAME_MODE_NAME;
-                updateGameExplanation();
-            } else {
-                // 無効なら元のロジック（通常はWaveに戻る）へ
-                // ※ originalToggleVisModeの実装は freq -> wave なので、それを呼ぶだけでOK
-                if (originalToggleVisMode) originalToggleVisMode();
-            }
-        } else if (window.visMode === GAME_MODE_NAME) {
-            // ゲームモードからは必ずWaveに戻る
-            window.visMode = 'wave';
-            if (typeof updateVisExplanation === 'function') updateVisExplanation();
+        if (isEnabled) {
+            // 有効なら何回タップしてもF3ゲームのまま (切り替えさせない)
+            window.visMode = GAME_MODE_NAME;
+            updateGameExplanation();
         } else {
-            // それ以外（wave -> spectrogram など）は元のロジックにお任せ
+            // 無効なら元のロジック（通常切り替え）
             if (originalToggleVisMode) originalToggleVisMode();
         }
     };
@@ -115,25 +101,29 @@
         }
     }
 
-
-    // --- 3. 描画ループの拡張 ---
+    // --- 3. 描画ループ ---
 
     window.visualize = function() {
         if(!window.isRecording) return;
 
-        if (window.visMode === GAME_MODE_NAME) {
-            // ゲームモードなら独自描画
+        // 設定が有効、または現在モードがゲームならゲームを描画
+        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+        
+        if (isEnabled || window.visMode === GAME_MODE_NAME) {
+            // 強制的にモード名を合わせる
+            if(window.visMode !== GAME_MODE_NAME) {
+                window.visMode = GAME_MODE_NAME;
+                updateGameExplanation();
+            }
             drawGameMode();
             requestAnimationFrame(window.visualize);
         } else {
-            // それ以外は元の描画関数に任せる（これで既存表示は壊れない）
+            // それ以外は元の描画関数
             if (originalVisualize) originalVisualize();
         }
     };
 
-
-    // --- 4. ゲームモードの描画ロジック ---
-
+    // --- 4. ゲームモード描画 (前回と同じ) ---
     function drawGameMode() {
         const canvas = document.getElementById("visualizer");
         if (!canvas || !window.analyser || !window.dataArray) return;
@@ -145,24 +135,20 @@
 
         window.analyser.getByteFrequencyData(window.dataArray);
 
-        // 背景
         ctx.fillStyle='#020617'; 
         ctx.fillRect(0,0,w,h);
 
-        // L Zone (Top, Blue)
         ctx.fillStyle = 'rgba(30, 64, 175, 0.3)';
         ctx.fillRect(0, 0, w, h * 0.4); 
         ctx.fillStyle = '#60a5fa';
         ctx.font = 'bold 14px sans-serif';
         ctx.fillText("L Zone (Target)", 10, 20);
 
-        // R Zone (Bottom, Red)
         ctx.fillStyle = 'rgba(153, 27, 27, 0.3)';
         ctx.fillRect(0, h * 0.6, w, h * 0.4); 
         ctx.fillStyle = '#f87171';
         ctx.fillText("R Zone (Target)", 10, h - 10);
 
-        // ピーク検出
         const sampleRate = window.audioCtx.sampleRate;
         const fftSize = window.analyser.fftSize; 
         const hzPerBin = sampleRate / fftSize; 
@@ -188,7 +174,6 @@
         const targetY = h - (normalizedPos * h);
 
         if (maxVal > 50) { 
-            // ボール
             ctx.beginPath();
             ctx.arc(w / 2, targetY, 15, 0, Math.PI * 2);
             ctx.fillStyle = '#facc15'; 
@@ -217,5 +202,4 @@
             ctx.textAlign = 'left'; 
         }
     }
-
 })();

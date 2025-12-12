@@ -1,13 +1,13 @@
 /**
- * 19_katakana_hint.js (v3: 強化版変換エンジン搭載)
- * 辞書にない単語でも、スペルパターン（フォニックス）を解析して
- * ネイティブに近い「L/R対応カタカナ」を自動生成するプラグイン。
+ * 19_katakana_hint.js (v4: 初回表示修正版)
+ * 辞書にない単語でも、スペルパターンを解析してネイティブに近いカタカナを自動生成。
+ * 初回ロード時にも確実に表示されるよう改善。
  */
 
 (function() {
     const STORAGE_KEY = 'lr_katakana_enabled';
     
-    // --- 優先辞書 (例外的な読み方や、特にこだわりたい単語) ---
+    // 優先辞書
     const DICTIONARY = {
         "light": "ルァイt", "right": "ゥライt",
         "lead": "リィード", "read": "ゥリィード",
@@ -19,16 +19,20 @@
         "fly": "fルァイ", "fry": "fゥライ"
     };
 
-    // 初期化
     window.addEventListener('load', () => {
         setTimeout(() => {
             injectSettingsToggle();
             applyState();
             hookUpdateDisplay();
+            
+            // ★追加: 初回ロード時、既に単語が表示されていたら即座にカタカナも出す
+            const targetEl = document.getElementById('target-word');
+            if (targetEl && targetEl.innerText !== '...') {
+                updateKatakana();
+            }
         }, 800);
     });
 
-    // 1. 設定画面UI (前回と同じ)
     function injectSettingsToggle() {
         const settingsBody = document.querySelector('#settings-modal .modal-content div[style*="overflow"]');
         if (!settingsBody || document.getElementById('setting-katakana-wrapper')) return;
@@ -70,7 +74,7 @@
         desc.style.fontSize = '0.8rem';
         desc.style.margin = '5px 0 0 25px';
         desc.style.opacity = '0.7';
-        desc.innerText = "Lは「ルァ」、Rは「ゥラ」、語尾は「t/k」など、ネイティブ発音に近い表記を表示します。";
+        desc.innerText = "Lは「ルァ」、Rは「ゥラ」など、ネイティブ発音に近い表記を表示します。";
         wrapper.appendChild(desc);
 
         const providerSection = document.getElementById('ai-provider').closest('div').parentNode; 
@@ -81,11 +85,7 @@
         }
     }
 
-    // 2. 表示エリアのスタイル (前回と同じ)
     function applyState() {
-        const isEnabled = localStorage.getItem(STORAGE_KEY);
-        const shouldShow = isEnabled === null ? true : (isEnabled === 'true');
-        
         if (!document.getElementById('katakana-style')) {
             const style = document.createElement('style');
             style.id = 'katakana-style';
@@ -135,7 +135,6 @@
         };
     }
 
-    // 3. 表示ロジック
     function updateKatakana(forceShow = false) {
         const isEnabled = localStorage.getItem(STORAGE_KEY);
         const shouldShow = isEnabled === null ? true : (isEnabled === 'true');
@@ -147,6 +146,13 @@
         }
 
         const targetEl = document.getElementById('target-word');
+        // まだロード中(...)なら出さない
+        if (targetEl && targetEl.innerText === '...') {
+             el.style.display = 'none';
+             return;
+        }
+
+        // Listenモードで伏せ字中なら隠す
         if (!forceShow && window.currentMode === 'listening' && targetEl && targetEl.innerText.includes('???')) {
             el.style.display = 'none';
             return;
@@ -158,24 +164,15 @@
         let isL = window.isTargetL;
 
         if (!word) return;
-
-        // ★強化された変換エンジン呼び出し
         const kana = convertToPhoneticKana(word.toLowerCase());
-        
-        // 全体を色付けするのではなく、L/Rの部分だけ色を変えたいが、
-        // 簡易的に全体にクラスを当てる（実装コスト削減のため）
         const colorClass = isL ? 'kana-l' : 'kana-r';
         el.innerHTML = `<span class="${colorClass}">${kana}</span>`;
     }
 
-    // --- 4. 強化版 自動変換エンジン (Main Logic) ---
     function convertToPhoneticKana(text) {
-        // 1. 辞書チェック
         if (DICTIONARY[text]) return DICTIONARY[text];
 
         let s = text;
-
-        // --- A. 特殊な複合文字 (Multi-char rules) ---
         s = s.replace(/tion$/, 'ション');
         s = s.replace(/sion$/, 'ジョン');
         s = s.replace(/ture$/, 'チャ');
@@ -186,46 +183,38 @@
         s = s.replace(/ch/, 'チ');
         s = s.replace(/ck/, 'ッk');
         s = s.replace(/ng$/, 'ンg');
-        s = s.replace(/th/, 'ス'); // 簡易的にス(th)とする
+        s = s.replace(/th/, 'ス'); 
         s = s.replace(/wh/, 'ホ');
 
-        // --- B. Lの処理 (舌を弾く音) ---
-        // 語頭のL
+        // L
         s = s.replace(/^la/, 'ルァ');
         s = s.replace(/^li/, 'リ');
         s = s.replace(/^lu/, 'ル');
         s = s.replace(/^le/, 'レ');
         s = s.replace(/^lo/, 'ロ');
-        // 子音の後のL (blue -> bル, play -> pル)
         s = s.replace(/([bcdfghjkmnpstvwz])l/g, '$1ル');
-        // その他のL
         s = s.replace(/l/g, 'ル');
 
-        // --- C. Rの処理 (唇を丸める音) ---
-        // 語頭のR
+        // R
         s = s.replace(/^ra/, 'ゥラ');
         s = s.replace(/^ri/, 'ゥリ');
         s = s.replace(/^ru/, 'ゥル');
         s = s.replace(/^re/, 'ゥレ');
         s = s.replace(/^ro/, 'ゥロ');
-        // 語尾のR (er, ar, or) -> ァ (舌を巻く)
         s = s.replace(/er$/, 'ァ');
         s = s.replace(/ar$/, 'ァ');
         s = s.replace(/or$/, 'ォ');
         s = s.replace(/ur$/, 'ァ');
-        // 子音の後のR (try -> tゥライ, cry -> kゥライ)
-        s = s.replace(/([bcdfghjkmnpstvwz])r/g, '$1ゥr'); // 簡易的に
-        // その他のR
+        s = s.replace(/([bcdfghjkmnpstvwz])r/g, '$1ゥr');
         s = s.replace(/r/g, 'ゥr');
 
-        // --- D. サイレントE (Magic E) の簡易処理 ---
-        // rate -> ゥレイt, like -> ルァイk
+        // Magic E
         s = s.replace(/a([bcdfghjklmnpstvwz])e$/, 'ェイ$1');
         s = s.replace(/i([bcdfghjklmnpstvwz])e$/, 'ァイ$1');
         s = s.replace(/o([bcdfghjklmnpstvwz])e$/, 'ォウ$1');
         s = s.replace(/u([bcdfghjklmnpstvwz])e$/, 'ュー$1');
 
-        // --- E. 語尾の子音 (母音を入れない) ---
+        // Consonants
         s = s.replace(/t$/, 't');
         s = s.replace(/k$/, 'k');
         s = s.replace(/p$/, 'p');
@@ -239,15 +228,14 @@
         s = s.replace(/ve$/, 'v');
         s = s.replace(/fe$/, 'f');
 
-        // --- F. 基本的な母音・子音の置換 ---
+        // Vowels & Others
         s = s.replace(/a/g, 'ァ');
         s = s.replace(/i/g, 'ィ');
         s = s.replace(/u/g, 'ゥ');
         s = s.replace(/e/g, 'ェ');
         s = s.replace(/o/g, 'ォ');
-        
         s = s.replace(/b/g, 'ブ');
-        s = s.replace(/c/g, 'ク'); // hard c
+        s = s.replace(/c/g, 'ク');
         s = s.replace(/d/g, 'ド');
         s = s.replace(/f/g, 'f');
         s = s.replace(/g/g, 'グ');
@@ -266,11 +254,9 @@
         s = s.replace(/y/g, 'ィ');
         s = s.replace(/z/g, 'ズ');
 
-        // 仕上げ: 連続するカタカナの微調整 (ゥゥ -> ゥ, etc)
         s = s.replace(/ゥゥ/g, 'ゥ');
         s = s.replace(/ルル/g, 'ル');
 
         return s;
     }
-
 })();

@@ -1,11 +1,10 @@
 /**
- * 20_ios_scroll_fix.js (v3: DBマネージャー対応版)
- * iPhone (iOS) でのスクロール制御パッチ。
- * 設定画面だけでなく、Word List Managerのスクロールも許可するように修正。
+ * 20_ios_scroll_fix.js (v4: 揺れ完全防止版)
+ * スクロール許可エリア以外でのタッチ移動を徹底的にブロックし、
+ * iPhoneでの「フワフワ感」を根絶するパッチ。
  */
 
 (function() {
-    // 1. スクロール制御用のCSS
     const style = document.createElement('style');
     style.innerHTML = `
         body.ios-locked {
@@ -15,9 +14,9 @@
             overflow: hidden;
         }
         .modal-overlay, .modal {
-            touch-action: none; 
+            touch-action: none; /* 基本的にタッチ無効 */
         }
-        /* スクロール許可対象のクラス */
+        /* スクロール許可対象 */
         .modal-content div[style*="overflow"],
         .scrollable-table,
         .db-list,
@@ -29,59 +28,59 @@
     document.head.appendChild(style);
 
     let savedScrollY = 0;
-
-    // スクロールを許可する要素のセレクタリスト
-    // ★ここが修正ポイント: DB管理画面のクラス(.scrollable-table, .db-list)を追加
+    // スクロールを許可する要素のセレクタ
     const allowSelectors = '.scrollable-table, .db-list, .history-list, div[style*="overflow"]';
 
     window.addEventListener('load', () => {
         const settingsModal = document.getElementById('settings-modal');
         const dbModal = document.getElementById('db-manager-modal');
+        // 他のモーダル(拡張機能用)もあれば対象に
+        const allModals = document.querySelectorAll('.modal, .modal-overlay');
 
-        [settingsModal, dbModal].forEach(modal => {
-            if (modal) {
-                // タッチ制御
-                modal.addEventListener('touchmove', (e) => {
-                    // タッチされた場所が「スクロール許可リスト」に入っていなければ無効化
-                    const isScrollable = e.target.closest(allowSelectors);
-                    if (!isScrollable) {
-                        e.preventDefault();
+        allModals.forEach(modal => {
+            // ★重要: モーダル上のタッチ移動は、許可リスト内以外全てブロック
+            modal.addEventListener('touchmove', (e) => {
+                const isScrollable = e.target.closest(allowSelectors);
+                // スクロール可能エリアでない、またはスクロール可能エリアだが中身が溢れていない場合はブロック
+                if (!isScrollable) {
+                    e.preventDefault();
+                } else {
+                    // 中身が溢れていないならスクロールさせる必要なし(バウンス防止)
+                    if (isScrollable.scrollHeight <= isScrollable.clientHeight) {
+                         e.preventDefault();
                     }
-                }, { passive: false });
+                }
+            }, { passive: false });
 
-                // 開閉検知
-                const observer = new MutationObserver((mutations) => {
-                    mutations.forEach((mutation) => {
-                        if (mutation.attributeName === 'style') {
-                            const isOpened = modal.style.display !== 'none';
-                            toggleScrollLock(isOpened);
-                            
-                            if (isOpened) {
-                                // 開いた直後に、内部のスクロール要素全てにバウンス対策を適用
-                                const scrollBoxes = modal.querySelectorAll(allowSelectors);
-                                scrollBoxes.forEach(box => applyBounceFix(box));
-                            }
+            // 開閉検知
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.attributeName === 'style') {
+                        const isOpened = modal.style.display !== 'none';
+                        toggleScrollLock(isOpened);
+                        
+                        if (isOpened) {
+                            const scrollBoxes = modal.querySelectorAll(allowSelectors);
+                            scrollBoxes.forEach(box => applyBounceFix(box));
                         }
-                    });
+                    }
                 });
-                observer.observe(modal, { attributes: true });
-            }
+            });
+            observer.observe(modal, { attributes: true });
         });
     });
 
-    // 2. Body固定ロジック
     function toggleScrollLock(shouldLock) {
-        if (shouldLock) {
+        // どれか一つのモーダルでも開いていればロック維持
+        const anyModalOpen = Array.from(document.querySelectorAll('.modal, .modal-overlay'))
+            .some(m => m.style.display !== 'none' && m.style.display !== '');
+
+        if (shouldLock || anyModalOpen) {
             if (document.body.classList.contains('ios-locked')) return;
             savedScrollY = window.scrollY;
             document.body.style.top = `-${savedScrollY}px`;
             document.body.classList.add('ios-locked');
         } else {
-            // 他のモーダルが開いている場合は解除しない
-            const settingsOpen = document.getElementById('settings-modal').style.display !== 'none';
-            const dbOpen = document.getElementById('db-manager-modal').style.display !== 'none';
-            if (settingsOpen || dbOpen) return;
-
             if (!document.body.classList.contains('ios-locked')) return;
             document.body.classList.remove('ios-locked');
             document.body.style.top = '';
@@ -89,7 +88,6 @@
         }
     }
 
-    // 3. バウンス（全体浮遊）防止の1pxハック
     function applyBounceFix(element) {
         if (element.dataset.iosFixApplied) return;
         element.dataset.iosFixApplied = "true";
@@ -99,7 +97,6 @@
             const totalScroll = element.scrollHeight;
             const currentScroll = top + element.offsetHeight;
 
-            // スクロール可能な状態（中身が溢れている）の時だけ調整
             if (element.scrollHeight > element.offsetHeight) {
                 if (top === 0) {
                     element.scrollTop = 1;
@@ -110,5 +107,4 @@
             }
         }, { passive: false });
     }
-
 })();

@@ -1,46 +1,37 @@
 /**
- * 18_ios_mic_fix.js
- * iPhone (iOS Safari) などで、ページを閉じたりバックグラウンドにした際に
- * マイクの使用状態（オレンジの点）が残り続ける問題を解決するためのパッチ。
+ * 18_ios_mic_fix.js (v2: 強力停止版)
+ * iPhone (iOS Safari) でホームに戻ったり画面を閉じた際に、
+ * マイクのリソースを確実に解放し、オレンジ色のインジケーターを消すパッチ。
  */
 
 (function() {
-    // ページが隠れたり、閉じられたりした時に実行
     function forceStopMicrophone() {
-        console.log("iOS Mic Fix: Releasing resources...");
-
-        // 1. MediaStream (getUserMedia) の停止
+        // 1. MediaStream (マイク入力) の物理切断
         if (window.currentStream) {
             try {
                 window.currentStream.getTracks().forEach(track => {
-                    track.stop(); // ここでハードウェアレベルの停止命令を送る
-                    console.log("Track stopped:", track.kind);
+                    track.stop(); 
+                    track.enabled = false; // 念押し
                 });
-            } catch(e) {
-                console.error("Error stopping stream:", e);
-            }
+            } catch(e) { console.error(e); }
             window.currentStream = null;
         }
 
         // 2. MediaRecorder の停止
         if (window.mediaRecorder && window.mediaRecorder.state !== 'inactive') {
-            try {
-                window.mediaRecorder.stop();
-            } catch(e) {}
+            try { window.mediaRecorder.stop(); } catch(e) {}
         }
 
         // 3. Web Speech API の停止
         if (window.webRecognition) {
-            try {
-                window.webRecognition.abort(); // stop()ではなくabort()で即切断
-            } catch(e) {}
+            try { window.webRecognition.abort(); } catch(e) {}
             window.webRecognition = null;
         }
 
-        // 4. AudioContext の停止 (バッテリー消費防止)
-        if (window.audioCtx && window.audioCtx.state === 'running') {
+        // 4. AudioContext の停止 (サスペンド)
+        if (window.audioCtx) {
             try {
-                window.audioCtx.suspend();
+                if (window.audioCtx.state === 'running') window.audioCtx.suspend();
             } catch(e) {}
         }
 
@@ -49,23 +40,20 @@
             window.isRecording = false;
         }
 
-        // UIの見た目も戻しておく (次に開いた時のため)
+        // UIリセット
         const btn = document.getElementById('rec-btn');
         if (btn) {
-            btn.classList.remove('recording');
-            btn.classList.remove('processing');
+            btn.classList.remove('recording', 'processing');
             btn.innerText = "🎤 Start";
         }
     }
 
-    // iOSでは unload よりも pagehide が確実に発火する
+    // iOS用の強力なイベント監視セット
     window.addEventListener('pagehide', forceStopMicrophone);
-
-    // タブ切り替えやホーム画面に戻った時にも停止させる (プライバシー保護推奨動作)
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') {
-            forceStopMicrophone();
-        }
+    window.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') forceStopMicrophone();
     });
+    // Safariのバックグラウンドフリーズ対策
+    window.addEventListener('freeze', forceStopMicrophone);
 
 })();
