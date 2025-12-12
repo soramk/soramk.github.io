@@ -1,7 +1,8 @@
 /**
- * 16_rank_system.js (v3: デフォルトOFF版)
+ * 16_rank_system.js (v4: レイアウト修正版)
  * 累計正解数(XP)に基づいて称号を与えるRPG風ランクシステム。
- * 設定画面でオン/オフが可能。デフォルトはOFFに変更。
+ * iPhoneでの表示崩れを防ぐため、ランクバーをヘッダーの下に独立して配置。
+ * デフォルトはOFF。
  */
 
 (function() {
@@ -11,11 +12,11 @@
     const RANKS = [
         { xp: 0,   title: "🌱 Beginner (初心者)", color: "#94a3b8" },
         { xp: 100,  title: "🥚 Novice (見習い)",   color: "#60a5fa" },
-        { xp: 500,  title: "🛡️ Soldier (戦士)",    color: "#34d399" },
+        { xp: 300,  title: "🛡️ Soldier (戦士)",    color: "#34d399" },
         { xp: 1000,  title: "⚔️ Knight (騎士)",     color: "#f59e0b" },
-        { xp: 2000, title: "🧙‍♂️ Wizard (魔導士)",   color: "#a855f7" },
-        { xp: 5000, title: "👑 Master (達人)",     color: "#f43f5e" },
-        { xp: 10000, title: "🐲 Legend (伝説)",     color: "#ec4899" },
+        { xp: 5000, title: "🧙‍♂️ Wizard (魔導士)",   color: "#a855f7" },
+        { xp: 10000, title: "👑 Master (達人)",     color: "#f43f5e" },
+        { xp: 30000, title: "🐲 Legend (伝説)",     color: "#ec4899" },
         { xp: 100000, title: "🌌 God (発音神)",      color: "#fbbf24" }
     ];
 
@@ -25,7 +26,7 @@
         loadXP();
         setTimeout(() => {
             injectSettingsToggle();
-            applyState(); // 設定に基づいて表示/非表示
+            applyState();
             hookXPLogic();
         }, 600);
     });
@@ -47,7 +48,7 @@
         return RANKS.find(r => r.xp > xp);
     }
 
-    // 1. 設定画面にスイッチを追加
+    // 1. 設定画面
     function injectSettingsToggle() {
         const settingsBody = document.querySelector('#settings-modal .modal-content div[style*="overflow"]');
         if (!settingsBody || document.getElementById('setting-rank-wrapper')) return;
@@ -72,13 +73,13 @@
         checkbox.id = 'toggle-rank';
         checkbox.style.marginRight = '10px';
         
-        // ★変更点: デフォルトはオフ (saved === null ? false : ...)
+        // デフォルトOFF
         const saved = localStorage.getItem(STORAGE_KEY);
         checkbox.checked = saved === null ? false : (saved === 'true');
 
         checkbox.onchange = function() {
             localStorage.setItem(STORAGE_KEY, checkbox.checked);
-            applyState(); // 即座に反映
+            applyState();
         };
 
         label.appendChild(checkbox);
@@ -89,10 +90,9 @@
         desc.style.fontSize = '0.8rem';
         desc.style.margin = '5px 0 0 25px';
         desc.style.opacity = '0.7';
-        desc.innerText = "正解数に応じて称号が上がるランクバーを画面上部に表示します。";
+        desc.innerText = "正解数に応じて称号が上がるランクバーを表示します。";
         wrapper.appendChild(desc);
 
-        // 挿入位置: Celebration設定の後ろ
         const celebSetting = document.getElementById('setting-celebration-wrapper');
         if(celebSetting) {
             celebSetting.parentNode.insertBefore(wrapper, celebSetting.nextSibling);
@@ -101,22 +101,22 @@
         }
     }
 
-    // 2. 表示状態の切り替え
+    // 2. 表示切り替え
     function applyState() {
         const isEnabled = localStorage.getItem(STORAGE_KEY);
-        // ★変更点: デフォルトはオフ
-        const shouldShow = isEnabled === null ? false : (isEnabled === 'true');
+        const shouldShow = isEnabled === null ? false : (isEnabled === 'true'); // デフォルトOFF
 
         const container = document.getElementById('rank-container');
         
         if (shouldShow) {
-            if (!container) injectRankDisplay(); // なければ作る
+            if (!container) injectRankDisplay();
             if (container) container.style.display = 'block';
         } else {
             if (container) container.style.display = 'none';
         }
     }
 
+    // 3. ランクバーの注入 (★レイアウト修正箇所)
     function injectRankDisplay() {
         if(document.getElementById('rank-container')) return;
 
@@ -125,29 +125,27 @@
 
         const rankContainer = document.createElement('div');
         rankContainer.id = 'rank-container';
+        // スタイル調整: 独立した行として表示
         rankContainer.style.width = '100%';
-        rankContainer.style.marginBottom = '10px';
+        rankContainer.style.marginTop = '5px';
+        rankContainer.style.marginBottom = '15px'; // 下の要素との間隔
         rankContainer.style.cursor = 'pointer';
         rankContainer.onclick = showRankDetails;
 
         const rankData = getRank(currentXP);
         
         rankContainer.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:flex-end; font-size:0.8rem; margin-bottom:2px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; font-size:0.8rem; margin-bottom:4px;">
                 <span id="rank-title" style="font-weight:bold; color:${rankData.color};">${rankData.title}</span>
                 <span id="rank-xp" style="opacity:0.6;">XP: ${currentXP}</span>
             </div>
-            <div style="background:rgba(128,128,128,0.2); height:6px; border-radius:3px; overflow:hidden;">
+            <div style="background:rgba(128,128,128,0.2); height:8px; border-radius:4px; overflow:hidden;">
                 <div id="rank-progress" style="background:${rankData.color}; height:100%; width:0%; transition: width 0.5s;"></div>
             </div>
         `;
 
-        const title = document.querySelector('.app-title');
-        if(title && title.parentNode) {
-            header.insertBefore(rankContainer, title.nextSibling);
-        } else {
-            header.appendChild(rankContainer);
-        }
+        // ★修正: header-barの中ではなく、「header-barの直後（sub-headerの前）」に挿入
+        header.parentNode.insertBefore(rankContainer, header.nextSibling);
         
         updateProgressUI();
     }
@@ -188,9 +186,7 @@
                 
                 const newRank = getRank(currentXP);
                 
-                // レベルアップ通知は、表示がオンの時だけ出す
                 const isEnabled = localStorage.getItem(STORAGE_KEY);
-                // ★変更点: デフォルトOFF
                 const shouldShow = isEnabled === null ? false : (isEnabled === 'true');
 
                 if (shouldShow && newRank.xp > oldRank.xp) {

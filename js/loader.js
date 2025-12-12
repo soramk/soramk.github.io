@@ -6,7 +6,7 @@
 
 (function() {
     // 1. キャッシュ対策用のバージョン番号 (変更があればここを変えるだけで全ファイル更新されます)
-    const APP_VERSION = 'v1.8.0'; 
+    const APP_VERSION = 'v1.8.1'; 
 
     // 2. 読み込むファイルのリスト (順番が重要です)
     const scripts = [
@@ -41,7 +41,8 @@
         'js/14_tongue_twister.js',      // 早口言葉（Tongue Twister）チャレンジ機能
         'js/15_celebration.js',         // 高得点や連勝時に紙吹雪を舞わせる演出機能
         'js/16_rank_system.js',         // RPG風ランクシステム機能
-        'js/17_settings_organizer.js'   // 設定画面の整理整頓機能
+        'js/17_settings_organizer.js',  // 設定画面の整理整頓機能
+        'js/18_ios_mic_fix.js'          // iOS向けマイク解放パッチ
     ];
 
     // 3. 順次読み込み処理 (Recursion to ensure execution order)
