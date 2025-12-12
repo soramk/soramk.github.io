@@ -1,28 +1,34 @@
 /**
- * 20_ios_scroll_fix.js (v6: 全画面・完全固定版)
- * アプリのホーム画面（Speak/Listen）を含む、画面全体のバウンス（揺れ）を
- * CSSの標準機能とJSイベントの両方で強力に防止します。
+ * 20_ios_scroll_fix.js (v7: 復帰時再ロック・完全固定版)
+ * iPhoneでホーム画面から戻った際や、タブを切り替えた際にも
+ * スクロールロックが外れないよう、イベント監視を強化したパッチ。
  */
 
 (function() {
+    // 1. 強力なCSSロック
     const style = document.createElement('style');
     style.innerHTML = `
-        /* 1. アプリ全体の枠組み（HTML/BODY）のバウンスを禁止 */
         html {
-            overscroll-behavior-y: none; /* 縦方向の引っ張りを無効化 */
-            height: 100%;                /* 高さ固定 */
-            -webkit-text-size-adjust: 100%; /* 文字サイズ自動調整の無効化 */
+            overscroll-behavior: none;
+            height: 100%;
+            overflow: hidden; /* HTMLレベルでスクロールを殺す */
         }
         
         body {
-            overscroll-behavior-y: none; /* Bodyの引っ張りも無効化 */
-            min-height: 100%;            /* コンテンツが少なくても高さを確保 */
-            
-            /* iPhoneでタップ時のグレー背景を消す（アプリっぽくする） */
-            -webkit-tap-highlight-color: transparent; 
+            overscroll-behavior: none;
+            height: 100%;
+            overflow: hidden; /* Bodyも殺す */
+            position: relative; /* 子要素の基準点 */
+            width: 100%;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* 2. モーダルが開いている時のBody固定用 */
+        /* アプリの中身全体を包むコンテナ（もしあれば）用 */
+        .container {
+            overscroll-behavior: none;
+        }
+
+        /* モーダルが開いている時のBody固定用（念のため維持） */
         body.ios-locked {
             position: fixed;
             width: 100%;
@@ -30,91 +36,110 @@
             overflow: hidden;
         }
 
-        /* 3. モーダル背景の操作禁止 */
+        /* モーダル背景 */
         .modal-overlay, .modal {
             touch-action: none; 
             overscroll-behavior: none;
         }
 
-        /* 4. スクロール許可エリア（設定画面やリスト） */
+        /* スクロール許可エリア（ここだけ動ける） */
         .modal-content div[style*="overflow"],
         .scrollable-table,
         .db-list,
         .history-list {
             touch-action: pan-y;
             -webkit-overflow-scrolling: touch;
-            overscroll-behavior-y: contain; /* 親（Body）へ揺れを伝えない */
+            overscroll-behavior-y: contain;
+            overflow-y: auto;
         }
     `;
     document.head.appendChild(style);
 
-    let savedScrollY = 0;
     const allowSelectors = '.scrollable-table, .db-list, .history-list, div[style*="overflow"]';
 
-    window.addEventListener('load', () => {
-        const modals = document.querySelectorAll('.modal, .modal-overlay');
-
-        modals.forEach(modal => {
-            // モーダル内のタッチ制御
-            modal.addEventListener('touchmove', (e) => {
+    // --- メイン処理 ---
+    function initScrollFix() {
+        // A. Body直下のタッチ移動をブロック (スクロール許可エリア以外)
+        document.body.addEventListener('touchmove', (e) => {
+            // モーダルが開いているかチェック
+            const anyModalOpen = document.querySelector('.modal[style*="display: block"], .modal[style*="display: flex"]');
+            
+            if (anyModalOpen) {
+                // モーダル内: 許可エリア以外はブロック
                 const scrollBox = e.target.closest(allowSelectors);
-                
-                // スクロールエリア外なら即ブロック
                 if (!scrollBox) {
                     e.preventDefault();
-                    e.stopImmediatePropagation();
-                    return;
+                } else {
+                    // 端っこバウンス防止
+                    preventBounce(e, scrollBox);
                 }
+            } else {
+                // メイン画面: 基本的にスクロール不要なアプリなのでブロック
+                // もしメイン画面にスクロールが必要な箇所があるなら、そこにクラスをつけて除外設定が必要
+                // 今回のアプリは1画面収まり型なので全ブロックでOK
+                e.preventDefault(); 
+            }
+        }, { passive: false });
 
-                // スクロールエリア内でも、端っこでのバウンスを防ぐ (1pxハックの簡易版)
-                const isAtTop = scrollBox.scrollTop <= 0;
-                const isAtBottom = scrollBox.scrollTop + scrollBox.clientHeight >= scrollBox.scrollHeight;
-                
-                // 中身が溢れていない場合は常にブロック
-                if (scrollBox.scrollHeight <= scrollBox.clientHeight) {
-                    e.preventDefault();
-                }
-            }, { passive: false });
-
-            // 開閉検知
+        // B. モーダル開閉監視
+        const modals = document.querySelectorAll('.modal, .modal-overlay');
+        modals.forEach(modal => {
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
                     if (mutation.attributeName === 'style') {
                         const isOpened = modal.style.display !== 'none';
-                        toggleScrollLock(isOpened);
+                        if (isOpened) {
+                            // 開いた瞬間にスクロール位置リセット等のケア
+                            const scrollBoxes = modal.querySelectorAll(allowSelectors);
+                            scrollBoxes.forEach(box => {
+                                // 1pxハック（初期位置ズラし）
+                                if(box.scrollTop === 0) box.scrollTop = 1;
+                            });
+                        }
                     }
                 });
             });
             observer.observe(modal, { attributes: true });
         });
+    }
+
+    // 端っこでのバウンス防止ロジック
+    function preventBounce(e, el) {
+        const isAtTop = el.scrollTop <= 0;
+        const isAtBottom = el.scrollTop + el.clientHeight >= el.scrollHeight;
+
+        // 上に引っ張る動作
+        if (isAtTop && e.touches[0].clientY > (e.lastY || 0)) {
+            // e.preventDefault(); // ここで止めるとスクロールできなくなることがあるので1pxハックに委ねる
+        }
+        // 下に引っ張る動作
+        // ...
         
-        // ★追加: メイン画面（Body）に対してもバウンス防止イベントを適用
-        // (CSSのoverscroll-behaviorが効かない古いiOS向けの保険)
-        document.body.addEventListener('touchmove', (e) => {
-            // モーダルが開いていない時のみチェック
-            if (!document.body.classList.contains('ios-locked')) {
-                // Body自体がスクロール不要なサイズ（画面に収まっている）なら、スクロール操作を禁止
-                if (document.body.scrollHeight <= window.innerHeight) {
-                    e.preventDefault();
-                }
-            }
-        }, { passive: false });
-    });
-
-    function toggleScrollLock(shouldLock) {
-        const anyModalOpen = Array.from(document.querySelectorAll('.modal, .modal-overlay'))
-            .some(m => m.style.display !== 'none' && m.style.display !== '');
-
-        if (shouldLock || anyModalOpen) {
-            if (document.body.classList.contains('ios-locked')) return;
-            savedScrollY = window.scrollY;
-            document.body.style.top = `-${savedScrollY}px`;
-            document.body.classList.add('ios-locked');
-        } else {
-            if (!document.body.classList.contains('ios-locked')) return;
-            document.body.classList.remove('ios-locked');
-            document.body.style.top = '';
-            window.scrollTo(0, savedScrollY);
+        // タッチ開始位置を保存しておくと方向判定ができるが、
+        // シンプルに「中身が溢れていないなら止める」のが最強
+        if (el.scrollHeight <= el.clientHeight) {
+            e.preventDefault();
         }
     }
+
+    // --- 実行 ---
+    window.addEventListener('load', initScrollFix);
+
+    // --- ★追加: 復帰時の再適用 ---
+    // ホームから戻った時や、タブを切り替えて戻った時に発火
+    function reapplyFix() {
+        console.log("iOS Scroll Fix: Re-applying locks...");
+        window.scrollTo(0, 0); // 画面位置を強制リセット
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+    }
+
+    window.addEventListener('pageshow', reapplyFix);
+    window.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            reapplyFix();
+        }
+    });
+    window.addEventListener('resize', reapplyFix); // アドレスバーの伸縮対策
+
 })();

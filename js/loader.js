@@ -6,7 +6,7 @@
 
 (function() {
     // 1. キャッシュ対策用のバージョン番号 (変更があればここを変えるだけで全ファイル更新されます)
-    const APP_VERSION = 'v1.8.1'; 
+    const APP_VERSION = 'v2.3.0'; 
 
     // 2. 読み込むファイルのリスト (順番が重要です)
     const scripts = [
@@ -44,7 +44,9 @@
         'js/17_settings_organizer.js',  // 設定画面の整理整頓機能
         'js/18_ios_mic_fix.js',         // iOS向けマイク解放パッチ
         'js/19_katakana_hint.js',       // L/R対応カタカナ自動生成プラグイン
-        'js/20_ios_scroll_fix.js'       // iOS向けスクロール固定パッチ
+        'js/20_ios_scroll_fix.js',      // iOS向けスクロール固定パッチ
+        'js/21_sentence_mode.js',       // センテンス（短文）シャドーイング機能
+        'js/22_reaction_mascot.js'      // 反応するマスコット機能
     ];
 
     // 3. 順次読み込み処理 (Recursion to ensure execution order)

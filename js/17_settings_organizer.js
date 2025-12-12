@@ -1,6 +1,6 @@
 /**
- * 17_settings_organizer.js (v4: Geminiリンク追加版)
- * 設定項目を整理し、Gemini APIキー取得ページへのリンクを追加します。
+ * 17_settings_organizer.js (v5: 新機能対応版)
+ * 設定項目の並び順に「センテンスモード」と「マスコット」を追加。
  */
 
 (function() {
@@ -14,7 +14,7 @@
         const scrollableBody = modalContent.querySelector('div[style*="overflow"]');
         if (!scrollableBody) return;
 
-        // --- 0. Geminiリンクの注入 (New!) ---
+        // Geminiリンク注入
         const apiKeyInput = document.getElementById('api-key-gemini');
         if (apiKeyInput && !document.getElementById('gemini-link-hint')) {
             const linkDiv = document.createElement('div');
@@ -29,7 +29,7 @@
             apiKeyInput.parentNode.insertBefore(linkDiv, apiKeyInput.nextSibling);
         }
 
-        // --- 以下、既存の整理ロジック ---
+        // 要素特定
         const providerSection = document.querySelector('#ai-provider') ? document.querySelector('#ai-provider').closest('div') : null;
         const configGemini = document.getElementById('config-gemini');
         const configOpenAI = document.getElementById('config-openai');
@@ -38,9 +38,16 @@
         const saveBtn = scrollableBody.querySelector('.btn-main');
         const katakanaSection = document.getElementById('setting-katakana-wrapper');
 
+        // ★更新: 拡張機能の並び順定義
         const extensionOrder = [
-            'setting-mirror-wrapper', 'setting-f3game-wrapper', 'setting-blitz-wrapper',
-            'setting-twister-wrapper', 'setting-rank-wrapper', 'setting-celebration-wrapper'
+            'setting-mirror-wrapper',      // 1. ミラー
+            'setting-f3game-wrapper',      // 2. F3ゲーム
+            'setting-blitz-wrapper',       // 3. Blitz
+            'setting-sentence-wrapper',    // 4. センテンス (New!)
+            'setting-twister-wrapper',     // 5. 早口言葉
+            'setting-rank-wrapper',        // 6. ランク
+            'setting-celebration-wrapper', // 7. 祝賀
+            'setting-mascot-wrapper'       // 8. マスコット (New!)
         ];
 
         const basicGroup = document.createElement('div');
