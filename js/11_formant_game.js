@@ -1,6 +1,7 @@
 /**
- * 11_formant_game.js (v4: 表示クリーンアップ版)
- * F3ゲーム有効時、他の波形ラベルなどの残骸を強制的に非表示にします。
+ * 11_formant_game.js (v5: 表示完全独占版)
+ * 設定で有効にすると、ビジュアライザー表示・ラベル・説明文を
+ * 「F3ゲーム専用」に完全に固定し、他のモードの干渉を遮断します。
  */
 
 (function() {
@@ -9,13 +10,23 @@
     const FREQ_MIN = 1200;
     const FREQ_MAX = 3500;
 
+    // 元の関数を退避
     const originalToggleVisMode = window.toggleVisMode;
     const originalVisualize = window.visualize;
+    const originalUpdateVisExplanation = window.updateVisExplanation;
+    const originalRenderStaticResult = window.renderStaticResult;
 
     window.addEventListener('load', () => {
-        setTimeout(injectSettingsToggle, 800);
+        setTimeout(() => {
+            injectSettingsToggle();
+            // ロード直後に一度状態を適用
+            if (localStorage.getItem(STORAGE_KEY) === 'true') {
+                applyF3ModeForcefully();
+            }
+        }, 800);
     });
 
+    // 1. 設定画面
     function injectSettingsToggle() {
         const settingsBody = document.querySelector('#settings-modal .modal-content div[style*="overflow"]');
         if (!settingsBody || document.getElementById('setting-f3game-wrapper')) return;
@@ -46,11 +57,11 @@
         checkbox.onchange = function() {
             localStorage.setItem(STORAGE_KEY, checkbox.checked);
             if (checkbox.checked) {
-                window.visMode = GAME_MODE_NAME;
-                updateGameExplanation();
+                applyF3ModeForcefully();
             } else {
+                // オフにしたらWaveに戻してあげる
                 window.visMode = 'wave';
-                if(typeof updateVisExplanation === 'function') updateVisExplanation();
+                if (originalUpdateVisExplanation) originalUpdateVisExplanation();
             }
         };
 
@@ -62,7 +73,7 @@
         desc.style.fontSize = '0.8rem';
         desc.style.margin = '5px 0 0 25px';
         desc.style.opacity = '0.7';
-        desc.innerText = "有効にすると、ビジュアライザーがF3ゲーム専用になります。";
+        desc.innerText = "有効にすると、ビジュアライザーがF3ゲーム専用になり、他の波形は表示されなくなります。";
         wrapper.appendChild(desc);
 
         const blitzSetting = document.getElementById('setting-blitz-wrapper');
@@ -73,43 +84,70 @@
         }
     }
 
-    // --- モード切替 ---
+    // --- ヘルパー: F3モードを強制適用 ---
+    function applyF3ModeForcefully() {
+        window.visMode = GAME_MODE_NAME;
+        // 即座にラベルなどを更新
+        if (window.updateVisExplanation) window.updateVisExplanation();
+    }
+
+    // --- 2. 重要な上書き: 説明文とラベルの更新を乗っ取る ---
+    window.updateVisExplanation = function() {
+        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+
+        // F3有効、または現在モードがF3なら、強制的にF3の表示にする
+        if (isEnabled || window.visMode === GAME_MODE_NAME) {
+            const el = document.getElementById('vis-explanation');
+            const label = document.getElementById('vis-label');
+            
+            if(el) el.innerHTML = "【🎯 F3ハンター】<br>声を出しながら黄色いボールを操作しよう！<br><b>R (Right):</b> 舌を奥に引いてボールを「下」へ。<br><b>L (Light):</b> 舌を前歯の裏に当ててボールを「上」へ。";
+            if(label) label.innerText = "F3 GAME"; // ★ここでSPECTRUM等を上書き
+        } else {
+            // それ以外なら元の関数にお任せ
+            if (originalUpdateVisExplanation) originalUpdateVisExplanation();
+        }
+    };
+
+    // --- 3. モード切替の無効化 ---
     window.toggleVisMode = function() {
         const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
         if (isEnabled) {
-            window.visMode = GAME_MODE_NAME;
-            updateGameExplanation();
+            applyF3ModeForcefully(); // 何回タップしてもF3のまま
         } else {
             if (originalToggleVisMode) originalToggleVisMode();
         }
     };
 
-    function updateGameExplanation() {
-        const el = document.getElementById('vis-explanation');
-        const label = document.getElementById('vis-label');
-        
-        if (window.visMode === GAME_MODE_NAME) {
-            if(el) el.innerHTML = "【🎯 F3ハンター】<br>声を出しながら黄色いボールを操作しよう！<br><b>R (Right):</b> 舌を奥に引いてボールを「下」へ。<br><b>L (Light):</b> 舌を前歯の裏に当ててボールを「上」へ。";
-            
-            // ★修正: ラベルを強制書き換え
-            if(label) label.innerText = "F3 GAME";
+    // --- 4. 録音停止後の静止画表示も乗っ取る ---
+    window.renderStaticResult = function(buffer) {
+        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+        if (isEnabled || window.visMode === GAME_MODE_NAME) {
+            // F3ゲームの場合、静止画（波形）は描画せず、待機画面のようなものを出すか
+            // あるいは「Game Paused」と出す
+            const canvas = document.getElementById("visualizer");
+            if (canvas) {
+                const ctx = canvas.getContext("2d");
+                const d = window.devicePixelRatio || 1;
+                ctx.fillStyle='#020617'; 
+                ctx.fillRect(0,0, canvas.width/d, canvas.height/d);
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.font = '14px sans-serif';
+                ctx.fillText("Game Paused (Tap Start)", 20, 30);
+            }
+        } else {
+            if (originalRenderStaticResult) originalRenderStaticResult(buffer);
         }
-    }
+    };
 
-    // --- 描画ループ ---
+    // --- 5. 描画ループ ---
     window.visualize = function() {
         if(!window.isRecording) return;
         const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
         
         if (isEnabled || window.visMode === GAME_MODE_NAME) {
-            if(window.visMode !== GAME_MODE_NAME) {
-                window.visMode = GAME_MODE_NAME;
-                updateGameExplanation();
-            }
-            // ★追加: 既存のラベルが残らないように毎回上書き
-            const label = document.getElementById('vis-label');
-            if(label && label.innerText !== "F3 GAME") label.innerText = "F3 GAME";
-
+            // 念のためモード強制
+            if(window.visMode !== GAME_MODE_NAME) window.visMode = GAME_MODE_NAME;
+            
             drawGameMode();
             requestAnimationFrame(window.visualize);
         } else {
@@ -117,6 +155,7 @@
         }
     };
 
+    // --- 6. ゲームモード描画 (変更なし) ---
     function drawGameMode() {
         const canvas = document.getElementById("visualizer");
         if (!canvas || !window.analyser || !window.dataArray) return;
@@ -127,16 +166,16 @@
 
         window.analyser.getByteFrequencyData(window.dataArray);
         ctx.fillStyle='#020617'; 
-        ctx.fillRect(0,0,w,h); // 画面クリア
+        ctx.fillRect(0,0,w,h);
 
-        // ゾーン描画
+        // ゾーン
         ctx.fillStyle = 'rgba(30, 64, 175, 0.3)'; ctx.fillRect(0, 0, w, h * 0.4); 
         ctx.fillStyle = '#60a5fa'; ctx.font = 'bold 14px sans-serif'; ctx.fillText("L Zone (Target)", 10, 20);
 
         ctx.fillStyle = 'rgba(153, 27, 27, 0.3)'; ctx.fillRect(0, h * 0.6, w, h * 0.4); 
         ctx.fillStyle = '#f87171'; ctx.fillText("R Zone (Target)", 10, h - 10);
 
-        // F3検出ロジック
+        // F3検出
         const sampleRate = window.audioCtx.sampleRate;
         const fftSize = window.analyser.fftSize; 
         const hzPerBin = sampleRate / fftSize; 
