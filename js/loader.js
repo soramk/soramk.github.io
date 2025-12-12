@@ -1,128 +1,86 @@
 /**
  * js/loader.js
- * 番号付きフォルダ構成 (0_utils, 1_data...) に対応したローダー。
- * 辞書ファイルも js/1_data/ フォルダ内から読み込みます。
+ * すべてのJavaScriptファイルを正しい順序で読み込むためのローダー。
+ * URLパラメータにバージョンを付与することで、キャッシュ問題を回避します。
  */
 
 (function() {
-    const APP_VERSION = 'v4.3.0'; // Numbered Folders Fixed
+    // 1. キャッシュ対策用のバージョン番号 (変更があればここを変えるだけで全ファイル更新されます)
+    const APP_VERSION = 'v2.4.0'; 
 
-    // ==========================================
-    // 1. Manifest: 読み込みファイル定義
-    // ==========================================
-    const Manifest = {
-        // 外部ライブラリ
-        libs: [
-            'https://cdn.jsdelivr.net/npm/chart.js'
-        ],
+    // 2. 読み込むファイルのリスト (順番が重要です)
+    const scripts = [
+        // --- Data Files ---
+        'data/basic.js',
+        'data/intermediate.js',
+        'data/advanced.js',
+        'data/business.js',
+
+        // --- Core & UI ---
+        'js/html_templates.js',
+        'js/6_dom_events.js',
+        'js/3_core_logic.js',
+
+        // --- Logic Modules ---
+        'js/2_db_manager.js',
+        'js/1_audio_visuals.js',
+        'js/4_api_client.js',
+        'js/5_app_flow.js',
         
-        // 辞書データ (js/1_data/ に移動済み)
-        dictionaries: [
-            'js/1_data/basic.js',
-            'js/1_data/intermediate.js',
-            'js/1_data/advanced.js',
-            'js/1_data/business.js'
-        ],
+        // --- External Libraries ---
+        'https://cdn.jsdelivr.net/npm/chart.js', // CDNはそのまま
 
-        // アプリケーションモジュール (フォルダ番号順に読み込む)
-        modules: [
-            // [0_utils] 環境パッチ
-            'js/0_utils/ios-fix.js',
+        // --- Extensions ---
+        'js/7_extensions.js',           // 学習記録の自動保存とグラフ化機能
+        'js/8_scoring.js',              // AIによる100点満点スコアリング機能
+        'js/9_overlay_playback.js',     // 「自分の声とモデル音声の重ね合わせ再生（オーバーレイ再生）」機能
+        'js/10_help_link.js',           // ヘルプリンクの追加
+        'js/11_formant_game.js',        // フォルマント（F3）の可視化ゲーム機能
+        'js/12_mirror_mode.js',         // Webカメラによる「リアルタイム・ミラーリング」機能
+        'js/13_blitz_mode.js',          // 高速モード（Blitz Mode）ミニマル・ペア・ブリッツ（聴覚特訓）機能
+        'js/14_tongue_twister.js',      // 早口言葉（Tongue Twister）チャレンジ機能
+        'js/15_celebration.js',         // 高得点や連勝時に紙吹雪を舞わせる演出機能
+        'js/16_rank_system.js',         // RPG風ランクシステム機能
+        'js/17_settings_organizer.js',  // 設定画面の整理整頓機能
+        'js/18_ios_mic_fix.js',         // iOS向けマイク解放パッチ
+        'js/19_katakana_hint.js',       // L/R対応カタカナ自動生成プラグイン
+        'js/21_sentence_mode.js',       // センテンス（短文）シャドーイング機能
+        'js/22_reaction_mascot.js',     // 反応するマスコット機能
 
-            // [4_ui] HTML生成 (最優先で箱を作る)
-            // ※ UIフォルダは "4" ですが、templates.js はロジックより先に必要なのでここで読みます
-            'js/4_ui/templates.js',
-
-            // [1_data] データ管理ロジック
-            'js/1_data/db-manager.js',
-            'js/1_data/scoring.js',
-
-            // [2_core] アプリ中枢
-            'js/2_core/recorder.js',
-            'js/2_core/api-client.js',
-            'js/2_core/app-flow.js',
-            'js/2_core/events.js',  // HTML生成後に実行
-
-            // [3_audio] 音声処理
-            'js/3_audio/visualizer.js',
-            'js/3_audio/playback.js',
-
-            // [5_features] 拡張機能・ゲーム
-            'js/5_features/chart.js',
-            'js/5_features/f3-game.js',
-            'js/5_features/blitz.js',
-            'js/5_features/twister.js',
-            'js/5_features/sentence.js',
-            'js/5_features/mirror.js',
-            'js/5_features/rank.js',
-            'js/5_features/confetti.js',
-            'js/5_features/mascot.js',
-
-            // [4_ui] 表示仕上げ
-            'js/4_ui/help.js',
-            'js/4_ui/katakana.js',
-            'js/4_ui/settings.js'
-        ]
-    };
-
-    // ==========================================
-    // 2. Loading Logic
-    // ==========================================
-    
-    // 全リストを一本化
-    const loadQueue = [
-        ...Manifest.libs,
-        ...Manifest.dictionaries,
-        ...Manifest.modules
+        'js/20_ios_scroll_fix.js'       // iOS向けスクロール固定パッチ
     ];
 
-    let currentIndex = 0;
-
-    function loadNext() {
-        // 全て完了したらアプリ起動
-        if (currentIndex >= loadQueue.length) {
-            console.log(`%c System Loaded (${APP_VERSION}) `, 'background: #2563eb; color: #fff; padding: 2px 5px; border-radius: 3px;');
-            if (typeof initApp === 'function') {
-                initApp();
-            } else {
-                console.error("FATAL: initApp() not found. Check js/2_core/app-flow.js");
-            }
+    // 3. 順次読み込み処理 (Recursion to ensure execution order)
+    function loadScript(index) {
+        if (index >= scripts.length) {
+            console.log("All scripts loaded successfully.");
             return;
         }
 
-        const src = loadQueue[currentIndex];
+        const src = scripts[index];
         const script = document.createElement('script');
-
-        // 外部URL以外にはバージョンパラメータを付与
+        
+        // CDNなど外部URLでない場合のみバージョンを付与
         if (!src.startsWith('http')) {
             script.src = src + '?v=' + APP_VERSION;
         } else {
             script.src = src;
         }
 
-        // 同期的に読み込むための再帰処理
-        script.onload = () => {
-            currentIndex++;
-            loadNext();
+        // 読み込み完了後に次を読み込む (同期的な実行順序を保証)
+        script.onload = function() {
+            loadScript(index + 1);
         };
-
-        script.onerror = () => {
-            console.error(`❌ Load Error: ${src}`);
-            // エラー表示
-            const errBanner = document.createElement('div');
-            errBanner.style.cssText = "position:fixed; top:0; left:0; width:100%; background:red; color:white; padding:10px; z-index:9999; font-weight:bold;";
-            errBanner.innerText = `⚠️ Failed to load: ${src}`;
-            document.body.appendChild(errBanner);
-            
-            // 止まらず次へ
-            currentIndex++;
-            loadNext();
+        
+        script.onerror = function() {
+            console.error("Failed to load script:", src);
+            // エラーでも次へ進むか、ここで止めるかは要件次第（今回は止まらず進む）
+            loadScript(index + 1);
         };
 
         document.body.appendChild(script);
     }
 
-    // Start
-    loadNext();
-
+    // 開始
+    loadScript(0);
 })();

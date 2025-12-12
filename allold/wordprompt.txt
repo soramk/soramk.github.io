@@ -1,0 +1,34 @@
+あなたは英語発音学習アプリのデータ作成アシスタントです。
+以下の[テーマ]に基づいて、LとRの発音が含まれる「Minimal Pairs（最小対語）」または「練習用の単語ペア」を10セット作成し、指定のJSONフォーマットで出力してください。
+
+[テーマ]: 旅行で使う英単語（Travel）
+
+[JSONフォーマットのルール]
+- ルートは配列 []
+- 各要素は { l: {w:"単語", b:[分解データ]}, r: {w:"単語", b:[分解データ]} } の形式
+- "b" (breakdown) 配列には、単語を発音する際の口の形（visemes）を順番に記述する。
+- 口の形（viseme types）は以下から適切なものを選ぶ:
+  - bilabial (p, b, m)
+  - labiodental (f, v)
+  - dental (th)
+  - alveolar (t, d, n, s, z)
+  - postalveolar (sh, ch, j)
+  - velar (k, g, ng)
+  - l_shape (L sound - tongue tip UP)
+  - r_shape (R sound - tongue pulled BACK)
+  - pucker (w)
+  - wide (a, ae)
+  - mid (e, uh, schwa)
+  - spread (iy, ea)
+  - round (o, ow)
+  - u_shape (u, oo)
+
+[出力例]
+[
+  { 
+    "l": { "w": "Late", "b": [{"p":"l","t":"l_shape"}, {"p":"ay","t":"spread"}, {"p":"t","t":"alveolar"}] }, 
+    "r": { "w": "Rate", "b": [{"p":"r","t":"r_shape"}, {"p":"ay","t":"spread"}, {"p":"t","t":"alveolar"}] } 
+  }
+]
+
+解説は不要です。JSONデータのみを出力してください。

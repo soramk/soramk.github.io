@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L/R Master 機能ガイド</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ヘルプページ専用の追加スタイル */
+        body {
+            /* アプリ本体より少し幅広で見やすく */
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: var(--bg);
+            color: var(--text);
+        }
+        h1.guide-title {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 30px;
+        }
+        section {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: var(--accent);
+            border-bottom: 2px solid rgba(128,128,128,0.2);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        h3 {
+            color: var(--text);
+            margin-bottom: 10px;
+        }
+        p {
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+        .screen-mockup {
+            border: 2px dashed rgba(128,128,128,0.3);
+            padding: 15px;
+            border-radius: 12px;
+            background: rgba(128,128,128,0.05);
+            margin: 20px 0;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 600px) {
+            .feature-grid { grid-template-columns: 1fr; }
+        }
+        /* スコアバッジのスタイル (8_scoring.jsより抽出) */
+        .score-badge {
+            display: inline-block;
+            background: #0f172a;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 50px;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        .score-high { background: linear-gradient(135deg, #22c55e, #16a34a); }
+        .score-mid { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .score-low { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+    </style>
+</head>
+<body>
+
+<div style="margin-bottom: 20px;">
+    <a href="index.html" style="
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
+        color: var(--primary);
+        font-weight: bold;
+        background: var(--card);
+        padding: 8px 16px;
+        border-radius: 50px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    ">
+        ⬅ アプリに戻る
+    </a>
+</div>
+
+<h1 class="guide-title">📘 L/R Master 機能ガイド</h1>
+
+<section>
+    <h2>はじめに</h2>
+    <p>L/R Masterは、日本人が苦手とする英語の「L」と「R」の発音と聞き取りを、AIの力と視覚的な補助を使って徹底的にトレーニングするためのアプリです。</p>
+</section>
+
+<section>
+    <h2>2つのメインモード</h2>
+    <div class="feature-grid">
+        <div>
+            <h3>🎤 Speak (発音) モード</h3>
+            <p>表示された単語をマイクに向かって発音し、AIが正しく発音できているかを判定します。</p>
+            <div class="screen-mockup container" style="box-shadow:none; margin:0; width:auto;">
+                <div class="mode-toggle"><button class="active">🎤 Speak</button><button>👂 Listen</button></div>
+                <div class="word-display">light</div>
+                <div class="sub-text">vs right</div>
+                <div class="controls">
+                    <button class="action-btn btn-model">🔊 Model</button>
+                    <button class="action-btn btn-main">🎤 Start</button>
+                </div>
+            </div>
+        </div>
+        <div>
+            <h3>👂 Listen (聞き取り) モード</h3>
+            <p>流れてくる音声を聞いて、それが「L」の単語か「R」の単語かをクイズ形式で答えます。</p>
+            <div class="screen-mockup container" style="box-shadow:none; margin:0; width:auto;">
+                <div class="mode-toggle"><button>🎤 Speak</button><button class="active">👂 Listen</button></div>
+                <div class="word-display blur">??????</div>
+                <div class="sub-text">vs ??????</div>
+                <div class="controls" style="grid-template-columns: 1fr 1fr;">
+                    <button class="choice-btn">L</button>
+                    <button class="choice-btn">R</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section>
+    <h2>発音のコツを「目で見て」理解する</h2>
+    <p>Speakモードでは、発音記号のボタンを押すことで、その音を出すときの正しい「口の形」と「舌の位置」を図解で確認できます。お手本音声（Model）も再生可能です。</p>
+    <div class="screen-mockup container" style="box-shadow:none; margin:0 auto; max-width: 500px;">
+        <div class="phoneme-container">
+            <div class="phoneme-btn">/l/</div>
+            <div class="phoneme-btn active">/r/</div>
+            <div class="phoneme-btn">/ai/</div>
+            <div class="phoneme-btn">/t/</div>
+        </div>
+        <div class="diagram-box" style="display:flex;">
+            <div class="mouth-diagram">
+                <svg viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="none" stroke="#cbd5e1" stroke-width="2" d="M10,50 Q10,10 45,10 Q80,10 80,50 Q80,90 45,90 Q10,90 10,50" />
+                    <circle cx="45" cy="60" r="10" fill="none" stroke="#333" stroke-width="2"/>
+                    <path d="M40,65 Q45,55 50,65" fill="#ef4444"/>
+                </svg>
+            </div>
+            <div class="diagram-text">
+                <h4>R-Shape <span style="font-size:0.7em; color:var(--accent);">R_SHAPE</span></h4>
+                <p>★重要: 舌先をどこにも触れないように後ろへ引きます。唇を少し丸めると出しやすくなります。</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section>
+    <h2>AIによる採点とフィードバック</h2>
+    <p>発音すると、AIが即座に判定を行います。「正解/不正解」だけでなく、100点満点でのスコアと、改善のための具体的なアドバイスが表示されます。判定には高精度なGoogle Geminiなどを利用可能です。</p>
+    <div class="feature-grid">
+        <div>
+            <h3>🎉 正解の例 (高得点)</h3>
+            <div class="screen-mockup">
+                <div class="feedback correct" style="background:#dcfce7; color:#166534;">
+                    🎉 Correct! <span class="score-badge score-high">95</span><br>
+                    <small style="opacity:0.8;">Heard: "light"</small>
+                </div>
+            </div>
+            <p>ネイティブに近い発音ができると、緑色の高得点バッジが表示されます。</p>
+        </div>
+        <div>
+            <h3>⚠️ 不正解の例 (アドバイス付き)</h3>
+            <div class="screen-mockup">
+                <div class="feedback incorrect" style="background:#fee2e2; color:#991b1b;">
+                    ⚠️ right <span class="score-badge score-low">45</span><br>
+                    <small style="font-weight:bold;">💡 舌先が上の歯茎に触れてしまっています。「R」は舌をどこにも触れずに後ろに引いてください。</small>
+                </div>
+            </div>
+            <p>惜しい場合や間違った場合は、スコアと共に、AIが具体的な改善点を日本語で教えてくれます。</p>
+        </div>
+    </div>
+</section>
+
+<section>
+    <h2>音声を可視化する「ビジュアライザー」</h2>
+    <p>画面中央の黒いボックスは、あなたの声をリアルタイムで視覚化します。タップすることで3つのモード（WAVE, SPECTROGRAM, SPECTRUM）を切り替えられます。</p>
+    <div class="screen-mockup container" style="box-shadow:none; margin:0 auto; max-width: 500px; background:#020617; color:white; border:none;">
+        <div style="height:80px; position:relative; background: linear-gradient(to bottom, #000, #00f, #f00, #ff0); opacity:0.8;">
+            <div style="position:absolute; top:2px; right:5px; font-size:0.6rem; color:rgba(255,255,255,0.5);">SPECTROGRAM</div>
+            <div style="position:absolute; top:40%; left:0; width:100%; height:2px; background:rgba(255,255,255,0.5);"></div>
+            <div style="position:absolute; top:35%; left:10px; font-size:0.7rem; color:rgba(255,255,255,0.8);">F3 (注目エリア)</div>
+        </div>
+        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.8); padding: 5px; background: rgba(128,128,128,0.2);">
+            【声紋 (Spectrogram)】下から3本目の線(F3)に注目。RはF3がグッと下がり、Lは高いまま維持されます。
+        </div>
+    </div>
+</section>
+
+<section>
+    <h2>便利な拡張機能</h2>
+    <p>学習をサポートする便利な機能が搭載されています。</p>
+    
+    <h3>📊 学習記録グラフ</h3>
+    <p>画面右上の「📊」ボタンを押すと、日々の学習記録（正解・不正解の数）が棒グラフで表示され、成長を実感できます。</p>
+
+    <h3>👥 お手本との重ね合わせ再生</h3>
+    <p>録音後、「▶️ Replay My Voice」の下に表示される「👥 Compare (Overlap)」ボタンを押すと、自分の録音とお手本の音声が同時に再生されます。リズムやイントネーションのズレを直感的に比較できます。</p>
+    <div class="screen-mockup" style="text-align:center;">
+        <button style="background: #dcfce7; color: #166534; border: 1px solid #86efac; padding: 8px; border-radius: 8px; font-weight:bold;">▶️ Replay My Voice</button><br>
+        <button style="margin-top: 10px; background: #6366f1; color: white; border: none; padding: 8px; border-radius: 8px; font-weight:bold;">👥 Compare (Overlap)</button>
+    </div>
+</section>
+
+<section>
+    <h2>その他の機能</h2>
+    <ul>
+        <li><strong>📝 Word List Manager (DB編集):</strong> 画面右上の「📝」ボタンから、収録されている単語リストの確認や編集、新しいレベルの作成、データのインポート/エクスポートが可能です。</li>
+        <li><strong>⚙️ 設定:</strong> 画面右上の「⚙️」ボタンから、使用するAIプロバイダーの切り替えやAPIキーの設定、お手本音声の再生スピード調整などが行えます。</li>
+        <li><strong>🌙 ダークモード:</strong> 画面右上の「🌙」ボタンで、目に優しいダークモードに切り替えられます。</li>
+    </ul>
+</section>
+
+<div style="text-align:center; margin-top:30px; margin-bottom:50px;">
+    <a href="index.html" style="background:var(--primary); color:white; padding:12px 30px; text-decoration:none; border-radius:50px; font-weight:bold; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);">アプリに戻る</a>
+</div>
+
+</body>
+</html>
