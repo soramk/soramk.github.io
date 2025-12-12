@@ -43,7 +43,8 @@
         'js/16_rank_system.js',         // RPG風ランクシステム機能
         'js/17_settings_organizer.js',  // 設定画面の整理整頓機能
         'js/18_ios_mic_fix.js',         // iOS向けマイク解放パッチ
-        'js/19_katakana_hint.js'        // L/R対応カタカナ自動生成プラグイン
+        'js/19_katakana_hint.js',       // L/R対応カタカナ自動生成プラグイン
+        'js/20_ios_scroll_fix.js'       // iOS向けスクロール固定パッチ
     ];
 
     // 3. 順次読み込み処理 (Recursion to ensure execution order)
