@@ -1,21 +1,18 @@
 /**
- * 18_ios_mic_fix.js (v3: 完全遮断版)
- * iPhone (iOS Safari) でホームに戻ったり画面を閉じた際に、
- * マイクのリソースを徹底的に破棄し、オレンジ色のインジケーターを消すパッチ。
+ * 18_ios_mic_fix.js (v4: 核ボタン級停止版)
+ * iPhone (iOS) でホームに戻ったりした際、マイクを物理的に遮断するパッチ。
  */
 
 (function() {
     function forceStopMicrophone() {
-        console.log("iOS Mic Fix: Killing all audio inputs...");
+        console.log("iOS Mic Fix: Terminating Audio...");
 
-        // 1. MediaStream (マイク入力) の物理切断
+        // 1. MediaStreamTrack の完全停止
         if (window.currentStream) {
-            try {
-                window.currentStream.getTracks().forEach(track => {
-                    track.stop(); 
-                    track.enabled = false;
-                });
-            } catch(e) { console.error(e); }
+            window.currentStream.getTracks().forEach(track => {
+                track.stop();
+                track.enabled = false;
+            });
             window.currentStream = null;
         }
 
@@ -23,6 +20,7 @@
         if (window.mediaRecorder && window.mediaRecorder.state !== 'inactive') {
             try { window.mediaRecorder.stop(); } catch(e) {}
         }
+        window.mediaRecorder = null;
 
         // 3. Web Speech API の停止
         if (window.webRecognition) {
@@ -30,21 +28,19 @@
             window.webRecognition = null;
         }
 
-        // 4. AudioContext の停止 (重要: これが動いているとマイク中とみなされることがある)
+        // 4. AudioContext の停止 (suspendではなくcloseを試みるが、再開不可のためsuspend)
         if (window.audioCtx) {
             try {
-                // suspend() ではなく close() してしまうのが確実だが、
-                // 再開が面倒になるので suspend に留める。ただしiOSでは効きにくい場合あり。
-                if (window.audioCtx.state === 'running') {
-                    window.audioCtx.suspend();
-                }
+                if (window.audioCtx.state === 'running') window.audioCtx.suspend();
             } catch(e) {}
         }
-
-        // 5. アプリ状態のリセット
-        if (typeof window.isRecording !== 'undefined') {
-            window.isRecording = false;
+        // オーバーレイ再生用のContextも停止
+        if (window.overlayCtx) {
+            try { window.overlayCtx.suspend(); } catch(e){}
         }
+
+        // 5. フラグリセット
+        if (typeof window.isRecording !== 'undefined') window.isRecording = false;
 
         // UIリセット
         const btn = document.getElementById('rec-btn');
@@ -54,26 +50,11 @@
         }
     }
 
-    // iOS用の強力なイベント監視セット
-    // pagehide: タブを閉じる/移動する時
+    // iOSのあらゆるバックグラウンド移行イベントをフック
     window.addEventListener('pagehide', forceStopMicrophone);
-    
-    // visibilitychange: ホームに戻る/別のアプリに行く時
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') {
-            forceStopMicrophone();
-        }
+    window.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') forceStopMicrophone();
     });
-    
-    // freeze: iOS特有のメモリ凍結時
     window.addEventListener('freeze', forceStopMicrophone);
-
-    // blur: ウィンドウからフォーカスが外れた時（念のため）
-    window.addEventListener('blur', () => {
-        // 録音中であれば止める
-        if (typeof window.isRecording !== 'undefined' && window.isRecording) {
-            forceStopMicrophone();
-        }
-    });
-
+    // window.addEventListener('blur', forceStopMicrophone); // blurは誤爆が多いので除外
 })();
