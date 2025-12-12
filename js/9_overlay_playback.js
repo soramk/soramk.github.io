@@ -1,37 +1,35 @@
 /**
- * 9_overlay_playback.js
- * 自分の声とモデル音声（TTS）を同時に再生し、比較・矯正を行うためのプラグイン。
+ * 9_overlay_playback.js (v2: 音量ブースト版)
+ * 自分の声とモデル音声（TTS）を同時に再生し、比較・矯正を行うプラグイン。
+ * ★自分の声が小さい場合に備え、GainNodeを使って音量を増幅(ブースト)させます。
  */
 
 (function() {
+    // 増幅率 (1.0 = そのまま, 2.0 = 2倍, 3.0 = 3倍)
+    // スマホのマイク入力は小さいことが多いので大きめに設定
+    const USER_VOLUME_GAIN = 3.0; 
+    const MODEL_VOLUME = 0.8;
+
     // ボタンを注入する処理
     function injectOverlayButton() {
-        // 既存の「自分の声を再生」ボタンを探す
         const replayBtn = document.getElementById('replay-user-btn');
-        
-        // まだボタンがない、あるいは既に追加済みなら何もしない
         if (!replayBtn || document.getElementById('overlay-btn')) return;
 
-        // 新しいボタンを作成
         const btn = document.createElement('button');
         btn.id = 'overlay-btn';
         btn.innerText = "👥 Compare (Overlap)";
         btn.className = "action-btn";
         
-        // スタイル調整（既存ボタンと並べるため）
         btn.style.marginTop = "10px";
-        btn.style.marginLeft = "5px"; // 少し隙間を空ける
-        btn.style.background = "#6366f1"; // インディゴ色で区別
+        btn.style.marginLeft = "5px";
+        btn.style.background = "#6366f1";
         btn.style.color = "white";
-        btn.style.display = "none"; // 最初は隠しておく
+        btn.style.display = "none";
 
-        // クリック時の動作
         btn.onclick = playOverlayAudio;
 
-        // 既存ボタンの後ろに追加
         replayBtn.parentNode.insertBefore(btn, replayBtn.nextSibling);
 
-        // 既存ボタンの表示状態を監視して、連動させる
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
@@ -43,48 +41,59 @@
     }
 
     // 重ね合わせ再生ロジック
-    function playOverlayAudio() {
-        // 1. ユーザーの音声データがあるか確認
+    async function playOverlayAudio() {
         if (!window.userAudioBlob) {
             alert("No recording found!");
             return;
         }
-
-        // 2. ターゲット単語があるか確認
         if (!window.targetObj || !window.targetObj.w) return;
 
-        // --- 再生準備 ---
-
-        // A. ユーザー音声
-        const userAudioUrl = URL.createObjectURL(window.userAudioBlob);
-        const userAudio = new Audio(userAudioUrl);
-        userAudio.volume = 1.0; // ユーザーの声を少し大きめに
-
-        // B. モデル音声 (Web Speech API TTS)
-        window.speechSynthesis.cancel(); // 前の再生をキャンセル
-        const modelUtterance = new SpeechSynthesisUtterance(window.targetObj.w);
-        modelUtterance.lang = 'en-US';
-        modelUtterance.rate = window.speechRate || 0.8;
-        modelUtterance.volume = 0.6; // モデル音声を少し控えめに（被ると聞き取りにくいため）
-
-        // --- 同時再生実行 ---
+        // --- A. ユーザー音声 (AudioContextで増幅再生) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
-        // ユーザー音声を再生開始
-        userAudio.play();
-        
-        // わずかな遅延（0.1秒）を入れてモデル音声を再生
-        // ※ 完全に同時だと位相干渉で聞こえにくくなることがあるため、ごく僅かにズラすと「シャドーイング」しやすくなります
+        try {
+            // BlobをArrayBufferに変換してデコード
+            const arrayBuffer = await window.userAudioBlob.arrayBuffer();
+            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+            // ソースノード作成
+            const source = audioCtx.createBufferSource();
+            source.buffer = audioBuffer;
+
+            // ゲインノード (音量増幅) 作成
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.value = USER_VOLUME_GAIN; // ★ここで音量を3倍にする
+
+            // 接続: Source -> Gain -> Speaker
+            source.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            // 再生開始
+            source.start(0);
+
+        } catch (e) {
+            console.error("Audio Boost Error:", e);
+            // エラー時はフォールバックとして通常の再生を行う
+            const simpleAudio = new Audio(URL.createObjectURL(window.userAudioBlob));
+            simpleAudio.volume = 1.0;
+            simpleAudio.play();
+        }
+
+        // --- B. モデル音声 (TTS) ---
+        // ユーザーの声と被りすぎないよう、わずかに遅らせて再生
         setTimeout(() => {
+            window.speechSynthesis.cancel();
+            const modelUtterance = new SpeechSynthesisUtterance(window.targetObj.w);
+            modelUtterance.lang = 'en-US';
+            modelUtterance.rate = window.speechRate || 0.8;
+            modelUtterance.volume = MODEL_VOLUME; 
             window.speechSynthesis.speak(modelUtterance);
         }, 100);
     }
 
-    // アプリ読み込み完了後にボタン注入を試みる
     window.addEventListener('load', () => {
-        // DOM生成待ち
         setTimeout(injectOverlayButton, 1000);
         
-        // 念のため、画面遷移（次の問題へ）のたびにボタン再チェックを行うフック
         const originalNext = window.nextQuestion;
         window.nextQuestion = function() {
             if(originalNext) originalNext();
