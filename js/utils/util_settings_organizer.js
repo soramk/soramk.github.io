@@ -1,5 +1,5 @@
 /**
- * 17_settings_organizer.js (v5: 新機能対応版)
+ * util_settings_organizer.js (v5: 新機能対応版)
  * 設定項目の並び順に「センテンスモード」と「マスコット」を追加。
  */
 

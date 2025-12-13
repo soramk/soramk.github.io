@@ -4,7 +4,7 @@
 function injectUI() {
     // HTML_TEMPLATES変数が読み込まれている前提で動作します
     if (typeof HTML_TEMPLATES === 'undefined') {
-        console.error("HTML_TEMPLATES not found. Make sure js/html_templates.js is loaded.");
+        console.error("HTML_TEMPLATES not found. Make sure js/core/core_templates.js is loaded.");
         return;
     }
 

@@ -1,5 +1,5 @@
 /**
- * 22_reaction_mascot.js
+ * feature_reaction_mascot.js
  * 成績に応じてリアクションするSVGマスコットを表示するプラグイン。
  * 設定画面でオン/オフが可能。
  */

@@ -1,5 +1,5 @@
 /**
- * 4_api_client.js
+ * core_api_client.js
  * Gemini, OpenAI, Web Speech API との通信ロジック
  */
 

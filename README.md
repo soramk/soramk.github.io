@@ -63,13 +63,34 @@ Plaintext
 ├── style.css           # スタイルシート
 ├── data/               # 単語データセット (basic.js, advanced.js etc.)
 └── js/
-    ├── 1_audio_visuals.js  # 音声可視化 (Canvas, Web Audio API)
-    ├── 2_db_manager.js     # DB操作・設定管理
-    ├── 3_core_logic.js     # アプリの状態管理・初期化・SRSロジック
-    ├── 4_api_client.js     # API通信 (Gemini, OpenAI, Web Speech)
-    ├── 5_app_flow.js       # UIインタラクション・録音フロー制御
-    ├── html_templates.js   # HTMLテンプレート文字列定義
-    └── ui_components.js    # DOM生成・注入ロジック
+    ├── loader.js                    # スクリプトローダー
+    ├── core/                        # コア機能
+    │   ├── core_templates.js        # HTMLテンプレート文字列定義
+    │   ├── core_logic.js            # アプリの状態管理・初期化・SRSロジック
+    │   ├── core_db_manager.js       # DB操作・設定管理
+    │   ├── core_audio_visuals.js    # 音声可視化 (Canvas, Web Audio API)
+    │   ├── core_api_client.js       # API通信 (Gemini, OpenAI, Web Speech)
+    │   ├── core_app_flow.js         # UIインタラクション・録音フロー制御
+    │   ├── core_dom_events.js       # DOMイベントハンドラ
+    │   └── core_ui_components.js    # DOM生成・注入ロジック
+    ├── features/                    # 拡張機能
+    │   ├── feature_extensions.js    # 学習記録・グラフ化
+    │   ├── feature_scoring.js       # AIスコアリング
+    │   ├── feature_overlay_playback.js  # 重ね合わせ再生
+    │   ├── feature_help_link.js     # ヘルプリンク
+    │   ├── feature_formant_game.js  # フォルマントゲーム
+    │   ├── feature_mirror_mode.js   # ミラーモード
+    │   ├── feature_blitz_mode.js    # ブリッツモード
+    │   ├── feature_tongue_twister.js # 早口言葉
+    │   ├── feature_celebration.js   # 祝賀演出
+    │   ├── feature_rank_system.js   # ランクシステム
+    │   ├── feature_katakana_hint.js # カタカナヒント
+    │   ├── feature_sentence_mode.js # センテンスモード
+    │   └── feature_reaction_mascot.js # 反応マスコット
+    └── utils/                       # ユーティリティ
+        ├── util_settings_organizer.js  # 設定整理
+        ├── util_ios_mic_fix.js      # iOSマイク修正
+        └── util_ios_scroll_fix.js   # iOSスクロール修正
 🛠️ 技術スタック
 Frontend: HTML5, CSS3, Vanilla JavaScript (ES6 Modules like structure)
 

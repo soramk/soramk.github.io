@@ -1,5 +1,5 @@
 /**
- * 20_ios_scroll_fix.js (v11: CSS移管・軽量版)
+ * util_ios_scroll_fix.js (v11: CSS移管・軽量版)
  * スタイル定義をstyle.cssに移管したため、
  * JSは「モーダル開閉時のクラス切り替え(ios-locked)」と「位置調整」のみを行います。
  */

@@ -292,7 +292,7 @@ function renderPhonemes() {
     });
 }
 
-// ★追加: 5_app_flow.js の nextQuestion から呼ばれる
+// ★追加: core_app_flow.js の nextQuestion から呼ばれる
 function updatePhonemesAndMouth(pair, isTargetL) {
     // データ整合性のために再描画
     renderPhonemes();

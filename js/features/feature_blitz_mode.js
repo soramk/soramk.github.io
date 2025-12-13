@@ -1,5 +1,5 @@
 /**
- * 13_blitz_mode.js (v2: 日本語化)
+ * feature_blitz_mode.js (v2: 日本語化)
  * 制限時間内にL/Rを聞き分ける早押しゲーム「Blitz Mode」を追加するプラグイン。
  * 設定画面でオン/オフが可能。
  */

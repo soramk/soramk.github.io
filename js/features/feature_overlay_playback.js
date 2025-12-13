@@ -1,5 +1,5 @@
 /**
- * 9_overlay_playback.js (v4: 音量バランス最適化版)
+ * feature_overlay_playback.js (v4: 音量バランス最適化版)
  * 自分の声を「主役」にし、モデル音声を「背景」にするよう音量を調整。
  */
 

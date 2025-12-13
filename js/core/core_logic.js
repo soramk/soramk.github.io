@@ -1,7 +1,7 @@
 /**
- * 3_core_logic.js
+ * core_logic.js
  * アプリケーションの「データ状態（グローバル変数）」と「起動シーケンス」のみを管理します。
- * ※ 具体的な画面遷移やボタン動作の関数は 2_dom_events.js や 5_app_flow.js に記述されています。
+ * ※ 具体的な画面遷移やボタン動作の関数は core_dom_events.js や core_app_flow.js に記述されています。
  */
 
 // --- 1. Global State Definitions (The Single Source of Truth) ---
@@ -46,21 +46,21 @@ window.addEventListener('load', async () => {
     console.log("App initializing...");
 
     // 1. HTMLテンプレートの注入確認
-    // html_templates.js が既に走っているはずだが、念のため確認
+    // core_templates.js が既に走っているはずだが、念のため確認
     if(typeof initHtmlTemplates === 'function' && !document.getElementById('db-manager-modal')) {
         initHtmlTemplates();
     }
 
     // 2. データベース(Local Storage)のロード
-    // 2_db_manager.js で定義
+    // core_db_manager.js で定義
     if(typeof loadDb === 'function') {
         await loadDb();
     } else {
-        console.error("loadDb function not found. Check 2_db_manager.js");
+        console.error("loadDb function not found. Check core_db_manager.js");
     }
     
     // 3. Canvas(ビジュアライザ)初期化
-    // 1_audio_visuals.js で定義
+    // core_audio_visuals.js で定義
     if(typeof initCanvas === 'function') {
         initCanvas();
         window.addEventListener('resize', initCanvas);
@@ -75,7 +75,7 @@ window.addEventListener('load', async () => {
     }
     
     // 6. 最初の問題を表示
-    // 5_app_flow.js で定義
+    // core_app_flow.js で定義
     if(typeof nextQuestion === 'function') {
         // カテゴリが空でないか確認してから開始
         if(window.db && window.db[window.currentCategory] && window.db[window.currentCategory].length > 0) {
@@ -85,7 +85,7 @@ window.addEventListener('load', async () => {
             if(typeof openDbManager === 'function') openDbManager();
         }
     } else {
-        console.error("nextQuestion function not found. Check 5_app_flow.js");
+        console.error("nextQuestion function not found. Check core_app_flow.js");
     }
 });
 
@@ -112,7 +112,7 @@ function loadSavedSettings() {
     if(elKeyO) elKeyO.value = kOpenAI || '';
     if(elProv) {
         elProv.value = window.currentProvider;
-        // UIの表示切り替え (2_dom_events.js の関数)
+        // UIの表示切り替え (core_dom_events.js の関数)
         if(typeof toggleProviderSettings === 'function') toggleProviderSettings(); 
     }
     
@@ -128,7 +128,7 @@ function loadSavedSettings() {
     }
 }
 
-// 設定保存ロジック (2_dom_events.js または settings modal から呼ばれる)
+// 設定保存ロジック (core_dom_events.js または settings modal から呼ばれる)
 window.saveSettings = function() {
     const elProv = document.getElementById('ai-provider');
     if(elProv) window.currentProvider = elProv.value;
@@ -146,7 +146,7 @@ window.saveSettings = function() {
         localStorage.setItem('lr_rate', window.speechRate);
     }
     
-    // 設定画面を閉じる (2_dom_events.js の関数)
+    // 設定画面を閉じる (core_dom_events.js の関数)
     if(typeof closeSettings === 'function') closeSettings();
     
     // Geminiモデル更新
@@ -157,7 +157,7 @@ window.saveSettings = function() {
     alert("設定を保存しました！");
 };
 
-// 単語統計更新ヘルパー (DB操作に近いのでここに配置、または 2_db_manager.js でも可)
+// 単語統計更新ヘルパー (DB操作に近いのでここに配置、または core_db_manager.js でも可)
 window.updateWordStats = function(isCorrect) {
     if (!window.currentPair) return;
     
@@ -173,11 +173,11 @@ window.updateWordStats = function(isCorrect) {
         window.currentPair.nextReview = Date.now();
     }
     
-    // DB保存 (2_db_manager.js)
+    // DB保存 (core_db_manager.js)
     if(typeof saveDb === 'function') saveDb();
 };
 
-// モデル音声再生ヘルパー (1_audio_visuals.js にあるべきだが、単純なのでここでも可)
+// モデル音声再生ヘルパー (core_audio_visuals.js にあるべきだが、単純なのでここでも可)
 window.speakModel = function() { 
     if(!window.targetObj || !window.targetObj.w) return;
     

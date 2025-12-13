@@ -16,38 +16,38 @@
         'data/advanced.js',
         'data/business.js',
 
-        // --- Core & UI ---
-        'js/html_templates.js',
-        'js/6_dom_events.js',
-        'js/3_core_logic.js',
-
-        // --- Logic Modules ---
-        'js/2_db_manager.js',
-        'js/1_audio_visuals.js',
-        'js/4_api_client.js',
-        'js/5_app_flow.js',
+        // --- Core Modules ---
+        'js/core/core_templates.js',         // HTMLテンプレート定義
+        'js/core/core_dom_events.js',        // DOMイベントハンドラ
+        'js/core/core_logic.js',             // アプリの状態管理・初期化
+        'js/core/core_db_manager.js',        // データベース管理
+        'js/core/core_audio_visuals.js',     // 音声可視化
+        'js/core/core_api_client.js',        // API通信 (Gemini, OpenAI, Web Speech)
+        'js/core/core_app_flow.js',          // アプリフロー制御
+        'js/core/core_ui_components.js',     // UIコンポーネント
         
         // --- External Libraries ---
         'https://cdn.jsdelivr.net/npm/chart.js', // CDNはそのまま
 
-        // --- Extensions ---
-        'js/7_extensions.js',           // 学習記録の自動保存とグラフ化機能
-        'js/8_scoring.js',              // AIによる100点満点スコアリング機能
-        'js/9_overlay_playback.js',     // 「自分の声とモデル音声の重ね合わせ再生（オーバーレイ再生）」機能
-        'js/10_help_link.js',           // ヘルプリンクの追加
-        'js/11_formant_game.js',        // フォルマント（F3）の可視化ゲーム機能
-        'js/12_mirror_mode.js',         // Webカメラによる「リアルタイム・ミラーリング」機能
-        'js/13_blitz_mode.js',          // 高速モード（Blitz Mode）ミニマル・ペア・ブリッツ（聴覚特訓）機能
-        'js/14_tongue_twister.js',      // 早口言葉（Tongue Twister）チャレンジ機能
-        'js/15_celebration.js',         // 高得点や連勝時に紙吹雪を舞わせる演出機能
-        'js/16_rank_system.js',         // RPG風ランクシステム機能
-        'js/17_settings_organizer.js',  // 設定画面の整理整頓機能
-        'js/18_ios_mic_fix.js',         // iOS向けマイク解放パッチ
-        'js/19_katakana_hint.js',       // L/R対応カタカナ自動生成プラグイン
-        'js/21_sentence_mode.js',       // センテンス（短文）シャドーイング機能
-        'js/22_reaction_mascot.js',     // 反応するマスコット機能
+        // --- Feature Extensions ---
+        'js/features/feature_extensions.js',           // 学習記録の自動保存とグラフ化機能
+        'js/features/feature_scoring.js',              // AIによる100点満点スコアリング機能
+        'js/features/feature_overlay_playback.js',     // 「自分の声とモデル音声の重ね合わせ再生（オーバーレイ再生）」機能
+        'js/features/feature_help_link.js',            // ヘルプリンクの追加
+        'js/features/feature_formant_game.js',         // フォルマント（F3）の可視化ゲーム機能
+        'js/features/feature_mirror_mode.js',          // Webカメラによる「リアルタイム・ミラーリング」機能
+        'js/features/feature_blitz_mode.js',           // 高速モード（Blitz Mode）ミニマル・ペア・ブリッツ（聴覚特訓）機能
+        'js/features/feature_tongue_twister.js',       // 早口言葉（Tongue Twister）チャレンジ機能
+        'js/features/feature_celebration.js',          // 高得点や連勝時に紙吹雪を舞わせる演出機能
+        'js/features/feature_rank_system.js',          // RPG風ランクシステム機能
+        'js/features/feature_katakana_hint.js',        // L/R対応カタカナ自動生成プラグイン
+        'js/features/feature_sentence_mode.js',        // センテンス（短文）シャドーイング機能
+        'js/features/feature_reaction_mascot.js',      // 反応するマスコット機能
 
-        'js/20_ios_scroll_fix.js'       // iOS向けスクロール固定パッチ
+        // --- Utilities ---
+        'js/utils/util_settings_organizer.js',      // 設定画面の整理整頓機能
+        'js/utils/util_ios_mic_fix.js',             // iOS向けマイク解放パッチ
+        'js/utils/util_ios_scroll_fix.js'           // iOS向けスクロール固定パッチ
     ];
 
     // 3. 順次読み込み処理 (Recursion to ensure execution order)

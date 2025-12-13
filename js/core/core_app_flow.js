@@ -1,7 +1,7 @@
 /**
- * 5_app_flow.js
+ * core_app_flow.js
  * アプリケーションのメインフロー制御 (録音、判定、画面遷移)
- * Note: Globals (mediaRecorder, audioCtx, etc.) are defined in 3_core_logic.js.
+ * Note: Globals (mediaRecorder, audioCtx, etc.) are defined in core_logic.js.
  */
 
 // --- Recording Flow ---

@@ -1,5 +1,5 @@
 // --- Global Variables Assumption ---
-// 3_core_logic.js で window.db = {}; が宣言されている前提ですが、
+// core_logic.js で window.db = {}; が宣言されている前提ですが、
 //念のためここで selectedLevel を定義します。
 let selectedLevel = null;
 
@@ -9,7 +9,7 @@ if (typeof db === 'undefined') {
 }
 
 // --- Data Loading Logic ---
-// 注: db変数は 3_core_logic.js で定義されたグローバル変数を使用します
+// 注: db変数は core_logic.js で定義されたグローバル変数を使用します
 
 async function loadDb() {
     const s = localStorage.getItem('lr_v24_db');

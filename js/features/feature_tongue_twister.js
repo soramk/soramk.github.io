@@ -1,5 +1,5 @@
 /**
- * 14_tongue_twister.js (v3: レベル選択対応版)
+ * feature_tongue_twister.js (v3: レベル選択対応版)
  * 早口言葉をレベル別 (Lv1〜Lv4) にカテゴリ分けして追加します。
  * 「🔥 Challenge」ボタンでLv1を開始し、その後プルダウンで難易度変更が可能です。
  */

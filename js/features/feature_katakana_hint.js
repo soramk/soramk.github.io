@@ -1,5 +1,5 @@
 /**
- * 19_katakana_hint.js (v5: ネイティブ発音・極 - Dark L/R対応版)
+ * feature_katakana_hint.js (v5: ネイティブ発音・極 - Dark L/R対応版)
  * 辞書にない単語でも、Dark L (語末のL) や R-colored vowels (母音+R) を
  * 識別して、よりネイティブに近い「魔法のカタカナ」を生成します。
  */

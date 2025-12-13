@@ -1,5 +1,5 @@
 /**
- * html_templates.js
+ * core_templates.js
  * アプリケーションのHTML構造を定義し、DOMに展開します。
  */
 

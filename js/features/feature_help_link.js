@@ -1,5 +1,5 @@
 /**
- * 10_help_link.js
+ * feature_help_link.js
  * ヘッダーに機能説明ページ(help.html)へのリンクボタンを追加するプラグイン。
  */
 
