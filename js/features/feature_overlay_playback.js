@@ -5,8 +5,8 @@
 
 (function() {
     // ★調整箇所
-    const USER_VOLUME_GAIN = 1.0; // ユーザー音声は元の音量（増幅なし）
-    const MODEL_VOLUME = 1.0;     // モデル音声も100%の音量（同じレベル）
+    const USER_VOLUME_GAIN = 3.0; // ユーザー音声を3倍に増幅（録音は元々小さいため）
+    const MODEL_VOLUME = 0.9;     // モデル音声を90%に調整（バランス調整）
 
     // 増幅器（Global汚染しないようwindowに紐付け）
     window.overlayCtx = null;
@@ -72,7 +72,7 @@
             source.buffer = audioBuffer;
 
             const gainNode = window.overlayCtx.createGain();
-            gainNode.gain.value = USER_VOLUME_GAIN; // ★同じ音量レベル
+            gainNode.gain.value = USER_VOLUME_GAIN; // ★ユーザー音声を増幅
 
             source.connect(gainNode);
             gainNode.connect(window.overlayCtx.destination);

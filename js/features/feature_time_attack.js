@@ -281,8 +281,12 @@
 
         checkbox.onchange = function() {
             localStorage.setItem(STORAGE_KEY, checkbox.checked);
-            const btn = document.getElementById('time-attack-btn');
-            if (btn) btn.style.display = checkbox.checked ? 'inline-block' : 'none';
+            if (checkbox.checked) {
+                setTimeout(injectTimeAttackButton, 500);
+            } else {
+                const btn = document.getElementById('time-attack-btn');
+                if (btn) btn.remove();
+            }
         };
 
         label.appendChild(checkbox);
@@ -346,6 +350,17 @@
                 setTimeout(injectTimeAttackButton, 1500);
             }
         }, 1000);
+
+        // 問題が変わった時にもボタンを再追加
+        const originalNext = window.nextQuestion;
+        if (originalNext) {
+            window.nextQuestion = function() {
+                originalNext();
+                if (isEnabled()) {
+                    setTimeout(injectTimeAttackButton, 500);
+                }
+            };
+        }
     });
 })();
 
