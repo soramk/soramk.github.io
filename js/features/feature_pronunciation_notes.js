@@ -41,17 +41,68 @@
 
     function getNote(word, category) {
         const key = getNoteKey(word, category);
-        return notesData[key] || '';
+        const noteObj = notesData[key];
+        if (!noteObj) return '';
+        // 旧形式（文字列）の場合はそのまま返す
+        if (typeof noteObj === 'string') return noteObj;
+        // 新形式（オブジェクト）の場合は結合して返す
+        let result = '';
+        if (noteObj.userNote) {
+            result += noteObj.userNote;
+        }
+        if (noteObj.aiAdvice) {
+            if (result) result += '\n\n';
+            result += '💡 AIアドバイス: ' + noteObj.aiAdvice;
+        }
+        return result;
+    }
+
+    function getNoteObject(word, category) {
+        const key = getNoteKey(word, category);
+        const noteObj = notesData[key];
+        if (!noteObj) return { userNote: '', aiAdvice: '' };
+        // 旧形式（文字列）の場合は変換
+        if (typeof noteObj === 'string') {
+            return { userNote: noteObj, aiAdvice: '' };
+        }
+        return noteObj;
     }
 
     function saveNote(word, category, note) {
         const key = getNoteKey(word, category);
+        const currentNote = getNoteObject(word, category);
+        
         if (note.trim()) {
-            notesData[key] = note.trim();
+            // ユーザーメモとAIアドバイスを分離
+            const parts = note.split(/\n\n💡 AIアドバイス:\s*/);
+            const userNote = parts[0].trim();
+            const aiAdvice = parts[1] ? parts[1].trim() : currentNote.aiAdvice;
+            
+            notesData[key] = {
+                userNote: userNote,
+                aiAdvice: aiAdvice
+            };
         } else {
             delete notesData[key];
         }
         saveNotesData();
+    }
+
+    // AIアドバイスを自動追記
+    function appendAIAdvice(word, category, advice) {
+        if (!isEnabled() || !advice || !advice.trim()) return;
+        
+        const key = getNoteKey(word, category);
+        const currentNote = getNoteObject(word, category);
+        
+        // AIアドバイスを更新（2回目以降は上書き）
+        notesData[key] = {
+            userNote: currentNote.userNote, // ユーザーメモは保持
+            aiAdvice: advice.trim() // AIアドバイスは最新のものに更新
+        };
+        
+        saveNotesData();
+        updateNoteDisplay();
     }
 
     // ノート表示エリアを追加
@@ -170,8 +221,18 @@
 
         if (window.targetObj && window.targetObj.w && window.currentCategory) {
             const note = getNote(window.targetObj.w, window.currentCategory);
+            const noteObj = getNoteObject(window.targetObj.w, window.currentCategory);
+            
             if (note) {
-                noteDisplay.innerHTML = `<strong>📝 メモ:</strong> ${note.replace(/\n/g, '<br>')}`;
+                let html = '<strong>📝 メモ:</strong><br>';
+                if (noteObj.userNote) {
+                    html += noteObj.userNote.replace(/\n/g, '<br>');
+                }
+                if (noteObj.aiAdvice) {
+                    if (noteObj.userNote) html += '<br><br>';
+                    html += '<span style="color:var(--accent);">💡 AIアドバイス:</span> ' + noteObj.aiAdvice.replace(/\n/g, '<br>');
+                }
+                noteDisplay.innerHTML = html;
                 noteInput.value = note;
             } else {
                 noteDisplay.innerHTML = '';
@@ -180,6 +241,22 @@
         } else {
             noteDisplay.innerHTML = '';
             noteInput.value = '';
+        }
+    }
+
+    // 既存のロジックをフックしてAIアドバイスを自動追記
+    function hookResultHandling() {
+        const originalHandleResult = window.handleResult;
+        if (originalHandleResult) {
+            window.handleResult = function(result) {
+                originalHandleResult(result);
+                
+                // 間違えた場合にAIアドバイスを自動追記
+                if (result && !result.isCorrect && result.advice && 
+                    window.targetObj && window.targetObj.w && window.currentCategory) {
+                    appendAIAdvice(window.targetObj.w, window.currentCategory, result.advice);
+                }
+            };
         }
     }
 
@@ -240,6 +317,7 @@
 
     window.addEventListener('load', () => {
         loadNotesData();
+        hookResultHandling();
         setTimeout(() => {
             injectSettingsToggle();
             if (isEnabled()) {

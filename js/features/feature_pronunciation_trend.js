@@ -75,8 +75,8 @@
             : (localStorage.getItem(STORAGE_KEY) === 'true');
     }
 
-    // トレンド表示モーダル
-    function showTrendModal() {
+    // トレンド表示モーダル（グローバルに公開）
+    window.showTrendModal = function() {
         if (!isEnabled()) {
             alert("発音トレンド分析機能が無効になっています。設定画面で有効にしてください。");
             return;
@@ -134,7 +134,7 @@
         modal.onclick = function(e) {
             if (e.target === modal) modal.remove();
         };
-    }
+    };
 
     function renderTrendChart(wordKey) {
         const container = document.getElementById('trend-chart-container');
@@ -255,20 +255,9 @@
         }
     }
 
-    // ボタンを追加
+    // ボタンを追加（「その他」メニューに含まれるため、アイコンは追加しない）
     function injectButton() {
-        const tools = document.querySelector('.header-tools');
-        if (!tools || document.getElementById('trend-btn')) return;
-
-        const btn = document.createElement('button');
-        btn.id = 'trend-btn';
-        btn.className = 'btn-icon';
-        btn.innerHTML = '📈';
-        btn.title = "発音トレンド分析";
-        btn.onclick = showTrendModal;
-        btn.style.display = isEnabled() ? 'inline-block' : 'none';
-
-        tools.appendChild(btn);
+        // util_header_menu.jsが自動的に「その他」メニューに追加するため、ここでは何もしない
     }
 
     window.addEventListener('load', () => {

@@ -115,8 +115,8 @@
         saveCoachingData();
     }
 
-    // コーチングモーダル表示
-    function showCoachingModal() {
+    // コーチングモーダル表示（グローバルに公開）
+    window.showCoachingModal = function() {
         if (!isEnabled()) {
             alert("発音コーチングモードが無効になっています。設定画面で有効にしてください。");
             return;
@@ -162,7 +162,7 @@
         modal.onclick = function(e) {
             if (e.target === modal) modal.remove();
         };
-    }
+    };
 
     function renderPracticePlan() {
         if (coachingData.practicePlan.length === 0) {
@@ -268,20 +268,9 @@
         }
     }
 
-    // ボタンを追加
+    // ボタンを追加（「その他」メニューに含まれるため、アイコンは追加しない）
     function injectButton() {
-        const tools = document.querySelector('.header-tools');
-        if (!tools || document.getElementById('coaching-btn')) return;
-
-        const btn = document.createElement('button');
-        btn.id = 'coaching-btn';
-        btn.className = 'btn-icon';
-        btn.innerHTML = '🎓';
-        btn.title = "発音コーチング";
-        btn.onclick = showCoachingModal;
-        btn.style.display = isEnabled() ? 'inline-block' : 'none';
-
-        tools.appendChild(btn);
+        // util_header_menu.jsが自動的に「その他」メニューに追加するため、ここでは何もしない
     }
 
     window.addEventListener('load', () => {

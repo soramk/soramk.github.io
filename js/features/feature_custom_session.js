@@ -52,8 +52,8 @@
         return words;
     }
 
-    // カスタムセッション作成モーダル
-    function showSessionManager() {
+    // カスタムセッション作成モーダル（グローバルに公開）
+    window.showSessionManager = function() {
         if (!isEnabled()) {
             alert("カスタム練習セッション機能が無効になっています。設定画面で有効にしてください。");
             return;
@@ -309,20 +309,9 @@
         }
     }
 
-    // ボタンを追加
+    // ボタンを追加（「その他」メニューに含まれるため、アイコンは追加しない）
     function injectButton() {
-        const tools = document.querySelector('.header-tools');
-        if (!tools || document.getElementById('custom-session-btn')) return;
-
-        const btn = document.createElement('button');
-        btn.id = 'custom-session-btn';
-        btn.className = 'btn-icon';
-        btn.innerHTML = '🎯';
-        btn.title = "カスタム練習セッション";
-        btn.onclick = showSessionManager;
-        btn.style.display = isEnabled() ? 'inline-block' : 'none';
-
-        tools.appendChild(btn);
+        // util_header_menu.jsが自動的に「その他」メニューに追加するため、ここでは何もしない
     }
 
     window.addEventListener('load', () => {

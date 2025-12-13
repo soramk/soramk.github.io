@@ -26,12 +26,12 @@
         
         // 学習支援系
         'lr_katakana_enabled': true,       // カタカナヒント
-        'lr_pronunciation_trend_enabled': false,  // 発音トレンド分析
-        'lr_custom_session_enabled': false,       // カスタム練習セッション
-        'lr_coaching_mode_enabled': false,        // 発音コーチングモード
+        'lr_pronunciation_trend_enabled': true,   // 発音トレンド分析（デフォルトON）
+        'lr_custom_session_enabled': true,        // カスタム練習セッション（デフォルトON）
+        'lr_coaching_mode_enabled': true,         // 発音コーチングモード（デフォルトON）
         'lr_detailed_stats_enabled': true,        // 詳細統計ダッシュボード（デフォルトON）
         'lr_review_reminder_enabled': true,       // 復習リマインダー（デフォルトON）
-        'lr_pronunciation_notes_enabled': false,  // 発音ノート機能
+        'lr_pronunciation_notes_enabled': true,   // 発音ノート機能（デフォルトON）
         'lr_accent_selection_enabled': true,      // アクセント選択機能（デフォルトON）
         
         // API・デバッグ系

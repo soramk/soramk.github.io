@@ -120,8 +120,8 @@
         }
     }
 
-    // 統計ダッシュボード表示
-    function showStatsDashboard() {
+    // 統計ダッシュボード表示（グローバルに公開）
+    window.showStatsDashboard = function() {
         if (!isEnabled()) {
             alert("詳細統計ダッシュボード機能が無効になっています。設定画面で有効にしてください。");
             return;
@@ -192,7 +192,7 @@
         modal.onclick = function(e) {
             if (e.target === modal) modal.remove();
         };
-    }
+    };
 
     function renderScoreDistribution() {
         if (statsData.scores.length === 0) {
@@ -298,20 +298,9 @@
         }
     }
 
-    // ボタンを追加
+    // ボタンを追加（「その他」メニューに含まれるため、アイコンは追加しない）
     function injectButton() {
-        const tools = document.querySelector('.header-tools');
-        if (!tools || document.getElementById('detailed-stats-btn')) return;
-
-        const btn = document.createElement('button');
-        btn.id = 'detailed-stats-btn';
-        btn.className = 'btn-icon';
-        btn.innerHTML = '📋';
-        btn.title = "詳細統計";
-        btn.onclick = showStatsDashboard;
-        btn.style.display = isEnabled() ? 'inline-block' : 'none';
-
-        tools.appendChild(btn);
+        // util_header_menu.jsが自動的に「その他」メニューに追加するため、ここでは何もしない
     }
 
     window.addEventListener('load', () => {

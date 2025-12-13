@@ -9,12 +9,29 @@
     
     // その他メニューに移動する機能
     const SECONDARY_BUTTONS = [
-        { id: 'trend-btn', icon: '📈', title: '発音トレンド分析' },
-        { id: 'custom-session-btn', icon: '🎯', title: 'カスタム練習セッション' },
-        { id: 'coaching-btn', icon: '🎓', title: '発音コーチング' },
-        { id: 'detailed-stats-btn', icon: '📋', title: '詳細統計' },
-        { id: 'help-btn', icon: '❓', title: '機能ガイド' }
+        { id: 'trend-btn', icon: '📈', title: '発音トレンド分析', handler: null },
+        { id: 'custom-session-btn', icon: '🎯', title: 'カスタム練習セッション', handler: null },
+        { id: 'coaching-btn', icon: '🎓', title: '発音コーチング', handler: null },
+        { id: 'detailed-stats-btn', icon: '📋', title: '詳細統計', handler: null },
+        { id: 'help-btn', icon: '❓', title: '機能ガイド', handler: null }
     ];
+
+    // 各機能のハンドラー関数を登録
+    function registerHandlers() {
+        SECONDARY_BUTTONS.forEach(btn => {
+            if (btn.id === 'trend-btn' && typeof window.showTrendModal === 'function') {
+                btn.handler = window.showTrendModal;
+            } else if (btn.id === 'custom-session-btn' && typeof window.showSessionManager === 'function') {
+                btn.handler = window.showSessionManager;
+            } else if (btn.id === 'coaching-btn' && typeof window.showCoachingModal === 'function') {
+                btn.handler = window.showCoachingModal;
+            } else if (btn.id === 'detailed-stats-btn' && typeof window.showStatsDashboard === 'function') {
+                btn.handler = window.showStatsDashboard;
+            } else if (btn.id === 'help-btn') {
+                btn.handler = () => { window.location.href = 'help.html'; };
+            }
+        });
+    }
 
     // Study Progressボタンもその他メニューに追加（feature_extensions.jsで追加される）
     // ただし、IDがない可能性があるので、onclickで判定
@@ -59,6 +76,7 @@
         `;
 
         // メニューアイテムを追加
+        registerHandlers();
         SECONDARY_BUTTONS.forEach(btn => {
             const menuItem = document.createElement('button');
             menuItem.className = 'more-menu-item';
@@ -84,9 +102,15 @@
                 this.style.background = 'transparent';
             };
             menuItem.onclick = function() {
-                const originalBtn = document.getElementById(btn.id);
-                if (originalBtn && originalBtn.onclick) {
-                    originalBtn.onclick();
+                // ハンドラー関数を直接呼び出す
+                if (btn.handler) {
+                    btn.handler();
+                } else {
+                    // フォールバック: 既存のボタンを探す
+                    const originalBtn = document.getElementById(btn.id);
+                    if (originalBtn && originalBtn.onclick) {
+                        originalBtn.onclick();
+                    }
                 }
                 toggleMoreMenu();
             };
@@ -202,6 +226,7 @@
 
     window.addEventListener('load', () => {
         setTimeout(() => {
+            registerHandlers();
             createMoreMenu();
             organizeButtons();
         }, 1500);
