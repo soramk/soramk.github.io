@@ -113,8 +113,8 @@
             const mirrorContainer = document.createElement('div');
             mirrorContainer.id = 'mirror-container';
             mirrorContainer.style.display = 'none';
-            mirrorContainer.style.width = '120px';
-            mirrorContainer.style.height = '120px';
+            mirrorContainer.style.width = '200px';  // 横を幅広に
+            mirrorContainer.style.height = '80px';  // 縦を短く
             mirrorContainer.style.marginLeft = '10px';
             mirrorContainer.style.borderRadius = '8px';
             mirrorContainer.style.overflow = 'hidden';
@@ -131,8 +131,10 @@
             video.style.width = '100%';
             video.style.height = '100%';
             video.style.objectFit = 'cover';
-            // 口元を中央に表示するように位置調整（上から60%の位置を中央に）
+            // 口元を拡大表示するように位置調整（上から60%の位置を中央に、拡大表示）
             video.style.objectPosition = 'center 60%';
+            // 口元を拡大するために、ビデオを少し拡大
+            video.style.transform = 'scaleX(-1) scale(1.5)';
 
             mirrorContainer.appendChild(video);
             diagramBox.appendChild(mirrorContainer);
