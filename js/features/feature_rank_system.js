@@ -73,9 +73,10 @@
         checkbox.id = 'toggle-rank';
         checkbox.style.marginRight = '10px';
         
-        // デフォルトOFF
-        const saved = localStorage.getItem(STORAGE_KEY);
-        checkbox.checked = saved === null ? false : (saved === 'true');
+        // デフォルト値はloader.jsで設定
+        checkbox.checked = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
 
         checkbox.onchange = function() {
             localStorage.setItem(STORAGE_KEY, checkbox.checked);

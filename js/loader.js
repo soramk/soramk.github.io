@@ -6,7 +6,61 @@
 
 (function() {
     // 1. キャッシュ対策用のバージョン番号 (変更があればここを変えるだけで全ファイル更新されます)
-    const APP_VERSION = 'v2.4.0'; 
+    const APP_VERSION = 'v2.4.0';
+    
+    // 2. 拡張機能のデフォルト設定 (true=デフォルトON, false=デフォルトOFF, null=未設定時のみ適用)
+    window.LR_FEATURE_DEFAULTS = {
+        // ビジュアル・可視化系
+        'lr_mirror_enabled': false,        // ミラーモード
+        'lr_f3game_enabled': false,        // F3ゲーム
+        
+        // ゲーム・チャレンジ系
+        'lr_blitz_enabled': false,         // Blitzモード
+        'lr_twister_enabled': false,       // 早口言葉
+        'lr_sentence_enabled': false,      // センテンスモード
+        
+        // UI・演出系
+        'lr_rank_enabled': false,          // ランクシステム
+        'lr_celebration_enabled': true,    // 祝賀演出
+        'lr_mascot_enabled': false,        // マスコット
+        
+        // 学習支援系
+        'lr_katakana_enabled': true,       // カタカナヒント
+        
+        // API・デバッグ系
+        'lr_api_usage_enabled': null,      // API使用量表示 (null=プロバイダーに応じて自動)
+        'lr_api_debug_enabled': false      // APIデバッグログ
+    };
+    
+    // 3. デフォルト設定を取得するヘルパー関数
+    window.getFeatureDefault = function(storageKey) {
+        const defaultValue = window.LR_FEATURE_DEFAULTS[storageKey];
+        const saved = localStorage.getItem(storageKey);
+        
+        // 既に保存されている場合はそれを返す
+        if (saved !== null) {
+            return saved === 'true';
+        }
+        
+        // 保存されていない場合、デフォルト値を返す
+        if (defaultValue !== null && defaultValue !== undefined) {
+            return defaultValue;
+        }
+        
+        // デフォルト値もnullの場合はfalse
+        return false;
+    };
+    
+    // 4. デフォルト設定を適用するヘルパー関数（初回のみ）
+    window.applyFeatureDefault = function(storageKey) {
+        const saved = localStorage.getItem(storageKey);
+        if (saved === null) {
+            const defaultValue = window.LR_FEATURE_DEFAULTS[storageKey];
+            if (defaultValue !== null && defaultValue !== undefined) {
+                localStorage.setItem(storageKey, defaultValue);
+            }
+        }
+    }; 
 
     // 2. 読み込むファイルのリスト (順番が重要です)
     const scripts = [
@@ -47,7 +101,7 @@
         'js/features/feature_reaction_mascot.js',      // 反応するマスコット機能
 
         // --- Utilities ---
-        'js/utils/util_settings_organizer.js',      // 設定画面の整理整頓機能
+        'js/utils/util_settings_organizer.js',      // 設定画面の整理整頓機能（カテゴリ分け）
         'js/utils/util_ios_mic_fix.js',             // iOS向けマイク解放パッチ
         'js/utils/util_ios_scroll_fix.js'           // iOS向けスクロール固定パッチ
     ];

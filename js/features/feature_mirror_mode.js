@@ -45,9 +45,10 @@
         checkbox.id = 'toggle-mirror-feature';
         checkbox.style.marginRight = '10px';
         
-        // 保存された設定を読み込む
-        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
-        checkbox.checked = isEnabled;
+        // 保存された設定を読み込む（デフォルト値はloader.jsで設定）
+        checkbox.checked = typeof window.getFeatureDefault === 'function' 
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
 
         // 切り替え時の動作
         checkbox.onchange = function() {
@@ -80,7 +81,9 @@
 
     // 2. 現在の設定に基づいてボタンの表示/非表示を切り替え
     function applyState() {
-        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+        const isEnabled = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
         const btn = document.getElementById('mirror-toggle-btn');
         const container = document.getElementById('mirror-container');
 

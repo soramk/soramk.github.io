@@ -20,7 +20,10 @@
         setTimeout(() => {
             injectSettingsToggle();
             // ロード直後に一度状態を適用
-            if (localStorage.getItem(STORAGE_KEY) === 'true') {
+            const isEnabled = typeof window.getFeatureDefault === 'function'
+                ? window.getFeatureDefault(STORAGE_KEY)
+                : (localStorage.getItem(STORAGE_KEY) === 'true');
+            if (isEnabled) {
                 applyF3ModeForcefully();
             }
         }, 800);
@@ -51,8 +54,9 @@
         checkbox.id = 'toggle-f3game-feature';
         checkbox.style.marginRight = '10px';
         
-        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
-        checkbox.checked = isEnabled;
+        checkbox.checked = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
 
         checkbox.onchange = function() {
             localStorage.setItem(STORAGE_KEY, checkbox.checked);
@@ -93,7 +97,9 @@
 
     // --- 2. 重要な上書き: 説明文とラベルの更新を乗っ取る ---
     window.updateVisExplanation = function() {
-        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+        const isEnabled = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
 
         // F3有効、または現在モードがF3なら、強制的にF3の表示にする
         if (isEnabled || window.visMode === GAME_MODE_NAME) {
@@ -110,7 +116,9 @@
 
     // --- 3. モード切替の無効化 ---
     window.toggleVisMode = function() {
-        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+        const isEnabled = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
         if (isEnabled) {
             applyF3ModeForcefully(); // 何回タップしてもF3のまま
         } else {
@@ -120,7 +128,9 @@
 
     // --- 4. 録音停止後の静止画表示も乗っ取る ---
     window.renderStaticResult = function(buffer) {
-        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+        const isEnabled = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
         if (isEnabled || window.visMode === GAME_MODE_NAME) {
             // F3ゲームの場合、静止画（波形）は描画せず、待機画面のようなものを出すか
             // あるいは「Game Paused」と出す
@@ -142,7 +152,9 @@
     // --- 5. 描画ループ ---
     window.visualize = function() {
         if(!window.isRecording) return;
-        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+        const isEnabled = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
         
         if (isEnabled || window.visMode === GAME_MODE_NAME) {
             // 念のためモード強制

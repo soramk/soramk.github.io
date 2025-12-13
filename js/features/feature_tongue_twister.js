@@ -72,7 +72,10 @@
         setTimeout(() => {
             injectSettingsToggle();
             // 起動時に有効なら即座にカテゴリを追加
-            if (localStorage.getItem(STORAGE_KEY) === 'true') {
+            const isEnabled = typeof window.getFeatureDefault === 'function'
+                ? window.getFeatureDefault(STORAGE_KEY)
+                : (localStorage.getItem(STORAGE_KEY) === 'true');
+            if (isEnabled) {
                 registerTwisterCategories();
             }
             applyState();
@@ -129,8 +132,9 @@
         checkbox.id = 'toggle-twister-feature';
         checkbox.style.marginRight = '10px';
         
-        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
-        checkbox.checked = isEnabled;
+        checkbox.checked = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
 
         checkbox.onchange = function() {
             localStorage.setItem(STORAGE_KEY, checkbox.checked);
@@ -163,7 +167,9 @@
 
     // 4. チャレンジボタン制御
     function applyState() {
-        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+        const isEnabled = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
         const subHeader = document.querySelector('.sub-header');
         if (!subHeader) return;
 

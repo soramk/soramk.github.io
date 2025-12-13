@@ -61,8 +61,10 @@
         checkbox.id = 'toggle-katakana';
         checkbox.style.marginRight = '10px';
         
-        const saved = localStorage.getItem(STORAGE_KEY);
-        checkbox.checked = saved === null ? true : (saved === 'true');
+        // デフォルト値はloader.jsで設定
+        checkbox.checked = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
 
         checkbox.onchange = function() {
             localStorage.setItem(STORAGE_KEY, checkbox.checked);
@@ -144,8 +146,9 @@
 
     // 3. 表示ロジック
     function updateKatakana(forceShow = false) {
-        const isEnabled = localStorage.getItem(STORAGE_KEY);
-        const shouldShow = isEnabled === null ? true : (isEnabled === 'true');
+        const shouldShow = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
         const el = document.getElementById('kana-display-target');
         
         if (!el || !shouldShow) {

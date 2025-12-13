@@ -77,8 +77,9 @@
         checkbox.id = 'toggle-sentence-feature';
         checkbox.style.marginRight = '10px';
         
-        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
-        checkbox.checked = isEnabled;
+        checkbox.checked = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
 
         checkbox.onchange = function() {
             localStorage.setItem(STORAGE_KEY, checkbox.checked);
@@ -107,7 +108,9 @@
 
     // 2. ボタン表示
     function applyState() {
-        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+        const isEnabled = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
         const subHeader = document.querySelector('.sub-header');
         if (!subHeader) return;
 

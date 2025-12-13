@@ -64,9 +64,10 @@
         checkbox.id = 'toggle-mascot-feature';
         checkbox.style.marginRight = '10px';
         
-        const saved = localStorage.getItem(STORAGE_KEY);
-        // デフォルトはオフ (邪魔にならないように)
-        checkbox.checked = saved === null ? false : (saved === 'true');
+        // デフォルト値はloader.jsで設定
+        checkbox.checked = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
 
         checkbox.onchange = function() {
             localStorage.setItem(STORAGE_KEY, checkbox.checked);
@@ -132,7 +133,9 @@
         window.handleResult = function(result) {
             if(originalHandleResult) originalHandleResult(result);
             
-            const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+            const isEnabled = typeof window.getFeatureDefault === 'function'
+                ? window.getFeatureDefault(STORAGE_KEY)
+                : (localStorage.getItem(STORAGE_KEY) === 'true');
             if (!isEnabled || !mascotContainer) return;
 
             const isCorrect = result.isCorrect;

@@ -1,6 +1,7 @@
 /**
- * util_settings_organizer.js (v5: 新機能対応版)
- * 設定項目の並び順に「センテンスモード」と「マスコット」を追加。
+ * util_settings_organizer.js (v6: カテゴリ分け対応版)
+ * 設定画面の拡張機能をカテゴリ別に整理します。
+ * カテゴリ: ビジュアル・可視化、ゲーム・チャレンジ、UI・演出、API・デバッグ
  */
 
 (function() {
@@ -38,27 +39,43 @@
         const saveBtn = scrollableBody.querySelector('.btn-main');
         const katakanaSection = document.getElementById('setting-katakana-wrapper');
 
-        // ★更新: 拡張機能の並び順定義
-        const extensionOrder = [
-            'setting-mirror-wrapper',      // 1. ミラー
-            'setting-f3game-wrapper',      // 2. F3ゲーム
-            'setting-blitz-wrapper',       // 3. Blitz
-            'setting-sentence-wrapper',    // 4. センテンス (New!)
-            'setting-twister-wrapper',     // 5. 早口言葉
-            'setting-rank-wrapper',        // 6. ランク
-            'setting-celebration-wrapper', // 7. 祝賀
-            'setting-mascot-wrapper'       // 8. マスコット (New!)
-        ];
+        // ★更新: カテゴリ別の拡張機能定義
+        const extensionCategories = {
+            'visual': {
+                title: '📹 ビジュアル・可視化',
+                items: [
+                    'setting-mirror-wrapper',      // ミラーモード
+                    'setting-f3game-wrapper'       // F3ゲーム
+                ]
+            },
+            'game': {
+                title: '🎮 ゲーム・チャレンジ',
+                items: [
+                    'setting-blitz-wrapper',       // Blitzモード
+                    'setting-sentence-wrapper',    // センテンスモード
+                    'setting-twister-wrapper'      // 早口言葉
+                ]
+            },
+            'ui': {
+                title: '✨ UI・演出',
+                items: [
+                    'setting-rank-wrapper',        // ランクシステム
+                    'setting-celebration-wrapper', // 祝賀演出
+                    'setting-mascot-wrapper'       // マスコット
+                ]
+            },
+            'api': {
+                title: '🔧 API・デバッグ',
+                items: [
+                    'setting-api-usage-wrapper',   // API使用量表示
+                    'setting-api-debug-wrapper'    // APIデバッグログ
+                ]
+            }
+        };
 
         const basicGroup = document.createElement('div');
         basicGroup.innerHTML = '<h4 style="margin:0 0 10px; color:var(--primary); border-bottom:2px solid rgba(128,128,128,0.1); padding-bottom:5px;">🎧 基本設定 (Basic)</h4>';
         basicGroup.style.marginBottom = '25px';
-
-        const extGroup = document.createElement('div');
-        extGroup.innerHTML = '<h4 style="margin:0 0 10px; color:var(--accent); border-bottom:2px solid rgba(128,128,128,0.1); padding-bottom:5px;">🧩 拡張機能 (Extensions)</h4>';
-        extGroup.style.marginBottom = '10px';
-        extGroup.style.display = 'grid';
-        extGroup.style.gap = '12px';
 
         if(providerSection) basicGroup.appendChild(providerSection);
         if(configGemini) basicGroup.appendChild(configGemini);
@@ -67,12 +84,43 @@
         if(speedSection) { speedSection.style.marginTop = "15px"; speedSection.style.marginBottom = "15px"; basicGroup.appendChild(speedSection); }
         if(katakanaSection) { katakanaSection.style.margin = "0"; basicGroup.appendChild(katakanaSection); }
 
-        extensionOrder.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) { el.style.margin = '0'; extGroup.appendChild(el); }
+        // カテゴリ別に拡張機能を整理
+        const extGroupsContainer = document.createElement('div');
+        extGroupsContainer.style.marginBottom = '10px';
+        
+        Object.entries(extensionCategories).forEach(([categoryKey, category]) => {
+            const categoryGroup = document.createElement('div');
+            categoryGroup.style.marginBottom = '20px';
+            
+            const categoryTitle = document.createElement('h4');
+            categoryTitle.innerHTML = category.title;
+            categoryTitle.style.margin = '0 0 10px 0';
+            categoryTitle.style.color = 'var(--accent)';
+            categoryTitle.style.borderBottom = '2px solid rgba(128,128,128,0.1)';
+            categoryTitle.style.paddingBottom = '5px';
+            categoryTitle.style.fontSize = '0.95rem';
+            categoryGroup.appendChild(categoryTitle);
+            
+            const categoryItems = document.createElement('div');
+            categoryItems.style.display = 'grid';
+            categoryItems.style.gap = '12px';
+            
+            category.items.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.margin = '0';
+                    categoryItems.appendChild(el);
+                }
+            });
+            
+            // カテゴリにアイテムがある場合のみ追加
+            if (categoryItems.children.length > 0) {
+                categoryGroup.appendChild(categoryItems);
+                extGroupsContainer.appendChild(categoryGroup);
+            }
         });
 
-        scrollableBody.insertBefore(extGroup, scrollableBody.firstChild);
+        scrollableBody.insertBefore(extGroupsContainer, scrollableBody.firstChild);
         scrollableBody.insertBefore(basicGroup, scrollableBody.firstChild);
 
         if (saveBtn) {

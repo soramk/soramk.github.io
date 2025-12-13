@@ -45,8 +45,9 @@
         checkbox.id = 'toggle-blitz-feature';
         checkbox.style.marginRight = '10px';
         
-        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
-        checkbox.checked = isEnabled;
+        checkbox.checked = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
 
         checkbox.onchange = function() {
             localStorage.setItem(STORAGE_KEY, checkbox.checked);
@@ -76,7 +77,9 @@
 
     // 2. ボタンの表示切り替え
     function applyState() {
-        const isEnabled = localStorage.getItem(STORAGE_KEY) === 'true';
+        const isEnabled = typeof window.getFeatureDefault === 'function'
+            ? window.getFeatureDefault(STORAGE_KEY)
+            : (localStorage.getItem(STORAGE_KEY) === 'true');
         const controls = document.getElementById('controls-listening');
         if (!controls) return;
 
