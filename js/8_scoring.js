@@ -1,5 +1,5 @@
 /**
- * 8_scoring.js (v2: リトライ機能付き)
+ * 8_scoring.js (v2.1: データマッピング修正版)
  * 発音の採点機能（0-100点）を追加するプラグイン。
  * サーバー混雑時(Overloaded)の自動リトライ機能を搭載。
  */
@@ -43,6 +43,7 @@ window.sendToGemini = async function(blob, mime) {
     
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${k}`;
     
+    // プロンプト：JSON形式を厳格に指定
     const promptText = `
     Input: Audio of a user trying to pronounce the English word "${targetObj.w}".
     Task:
@@ -86,7 +87,6 @@ window.sendToGemini = async function(blob, mime) {
             
             // エラーレスポンスの確認
             if (d.error) {
-                // "Overloaded" という言葉が含まれていたらリトライ対象にする
                 if (d.error.message && d.error.message.includes('overloaded')) {
                     throw new Error("Model is overloaded");
                 }
@@ -98,22 +98,20 @@ window.sendToGemini = async function(blob, mime) {
             const jsonMatch = rawText.match(/\{[\s\S]*\}/);
             const result = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(rawText);
             
-            checkPronunciation(result); 
+            // ここでチェック関数へ渡す
+            window.checkPronunciation(result); 
 
         } catch (e) {
             console.warn(`Gemini Attempt ${attempt} failed: ${e.message}`);
             
-            // リトライ条件: まだ回数が残っていて、かつサーバー混雑系のエラーの場合
+            // リトライ条件
             if (attempt < MAX_RETRIES && (e.message.includes('overloaded') || e.message.includes('Busy') || e.message.includes('Failed to fetch'))) {
-                // UIに「リトライ中...」と出す
                 const btn = document.getElementById('rec-btn');
                 if(btn) btn.innerText = `Retry (${attempt}/${MAX_RETRIES})...`;
                 
-                // 1.5秒待って再挑戦
                 await new Promise(resolve => setTimeout(resolve, 1500));
                 return tryFetch();
             } else {
-                // 諦める
                 handleError(new Error(`Gemini Error: ${e.message}. Please try changing the Model in settings.`));
             }
         }
@@ -125,7 +123,6 @@ window.sendToGemini = async function(blob, mime) {
 
 
 // --- 3. Web Speech API (ブラウザ標準) の採点フォールバック ---
-// (ここは変更なしですが、ファイル全体を置き換えるため含めます)
 
 window.startWebSpeech = function() {
     const isL = (typeof isTargetL !== 'undefined') ? isTargetL : true;
@@ -174,7 +171,8 @@ window.startWebSpeech = function() {
                 advice = `"${heard}" と聞こえました。`;
             }
         }
-        checkPronunciation({ heard: heard, correct: isOk, advice: advice, score: score });
+        // ここでもチェック関数へ渡す
+        window.checkPronunciation({ heard: heard, correct: isOk, advice: advice, score: score });
     };
 
     window.webRecognition.onerror = (event) => {
@@ -194,8 +192,27 @@ window.startWebSpeech = function() {
     catch(e) { console.error("Start Failed", e); if(typeof updateRecordButtonUI === 'function') updateRecordButtonUI(); }
 };
 
+// --- ★追加: データの正規化を行う関数 ---
+// Gemini (heard/correct) と handleResult (transcript/isCorrect) の橋渡し
+window.checkPronunciation = function(data) {
+    const standardized = {
+        // Geminiは 'heard', Web Speech APIなどは 'transcript' の場合があるため両対応
+        transcript: data.heard || data.transcript || "",
+        
+        // Geminiは 'correct', handleResultは 'isCorrect' を期待
+        isCorrect: (data.correct !== undefined) ? data.correct : (data.isCorrect !== undefined ? data.isCorrect : false),
+        
+        // スコアとアドバイスはそのまま
+        score: (data.score !== undefined) ? data.score : 0,
+        advice: data.advice || ""
+    };
 
-// --- 4. 結果表示（handleResult）のUI変更 ---
+    // UI更新関数へ渡す
+    window.handleResult(standardized);
+};
+
+
+// --- 4. 結果表示（handleResult） ---
 
 window.addToHistory = function(target, heard, isOk, score) {
     const list = document.getElementById('history-list');
@@ -208,6 +225,7 @@ window.addToHistory = function(target, heard, isOk, score) {
 };
 
 window.handleResult = function(result) {
+    // ここで受け取る result は checkPronunciation で正規化済み
     const inp = result.transcript;
     const isOk = result.isCorrect; 
     const score = result.score; 
@@ -225,6 +243,7 @@ window.handleResult = function(result) {
     const targetText = document.getElementById('target-word').innerText;
     window.addToHistory(targetText, inp, isOk, score);
 
+    // スコアバッジの生成
     let scoreBadge = '';
     if (score !== undefined) {
         let scoreClass = 'score-low';
@@ -274,4 +293,4 @@ window.handleResult = function(result) {
     if(typeof updateStreakDisplay === 'function') updateStreakDisplay();
 };
 
-console.log("Scoring Plugin Loaded: Gemini retry logic enabled.");
+console.log("Scoring Plugin Loaded: Fixed data mapping for score display.");
