@@ -6,7 +6,7 @@
 
 (function() {
     // 1. キャッシュ対策用のバージョン番号 (変更があればここを変えるだけで全ファイル更新されます)
-    const APP_VERSION = 'v2.4.0';
+    const APP_VERSION = 'v2.5.0';
     
     // 2. 拡張機能のデフォルト設定 (true=デフォルトON, false=デフォルトOFF, null=未設定時のみ適用)
     window.LR_FEATURE_DEFAULTS = {
@@ -26,6 +26,13 @@
         
         // 学習支援系
         'lr_katakana_enabled': true,       // カタカナヒント
+        'lr_pronunciation_trend_enabled': false,  // 発音トレンド分析
+        'lr_custom_session_enabled': false,       // カスタム練習セッション
+        'lr_coaching_mode_enabled': false,        // 発音コーチングモード
+        'lr_detailed_stats_enabled': false,       // 詳細統計ダッシュボード
+        'lr_review_reminder_enabled': false,      // 復習リマインダー
+        'lr_pronunciation_notes_enabled': false,  // 発音ノート機能
+        'lr_accent_selection_enabled': false,     // アクセント選択機能
         
         // API・デバッグ系
         'lr_api_usage_enabled': null,      // API使用量表示 (null=プロバイダーに応じて自動)
@@ -99,6 +106,13 @@
         'js/features/feature_katakana_hint.js',        // L/R対応カタカナ自動生成プラグイン
         'js/features/feature_sentence_mode.js',        // センテンス（短文）シャドーイング機能
         'js/features/feature_reaction_mascot.js',      // 反応するマスコット機能
+        'js/features/feature_pronunciation_trend.js',  // 発音トレンド分析機能
+        'js/features/feature_custom_session.js',       // カスタム練習セッション機能
+        'js/features/feature_coaching_mode.js',        // 発音コーチングモード機能
+        'js/features/feature_detailed_stats.js',       // 詳細統計ダッシュボード機能
+        'js/features/feature_review_reminder.js',      // 復習リマインダー機能
+        'js/features/feature_pronunciation_notes.js',  // 発音ノート機能
+        'js/features/feature_accent_selection.js',     // アクセント選択機能
 
         // --- Utilities ---
         'js/utils/util_settings_organizer.js',      // 設定画面の整理整頓機能（カテゴリ分け）
@@ -110,6 +124,12 @@
     function loadScript(index) {
         if (index >= scripts.length) {
             console.log("All scripts loaded successfully.");
+            // 全スクリプト読み込み後にデフォルト設定を適用
+            for (const key in window.LR_FEATURE_DEFAULTS) {
+                if (window.LR_FEATURE_DEFAULTS.hasOwnProperty(key)) {
+                    window.applyFeatureDefault(key);
+                }
+            }
             return;
         }
 

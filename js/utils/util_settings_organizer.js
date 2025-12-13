@@ -64,6 +64,18 @@
                     'setting-mascot-wrapper'       // マスコット
                 ]
             },
+            'learning': {
+                title: '📚 学習支援・分析',
+                items: [
+                    'setting-trend-wrapper',           // 発音トレンド分析
+                    'setting-custom-session-wrapper',  // カスタム練習セッション
+                    'setting-coaching-wrapper',        // 発音コーチングモード
+                    'setting-detailed-stats-wrapper',  // 詳細統計ダッシュボード
+                    'setting-reminder-wrapper',        // 復習リマインダー
+                    'setting-notes-wrapper',           // 発音ノート機能
+                    'setting-accent-wrapper'           // アクセント選択機能
+                ]
+            },
             'api': {
                 title: '🔧 API・デバッグ',
                 items: [
