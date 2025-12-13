@@ -48,16 +48,67 @@ async function sendToAI(audioBlob) {
 async function fetchModels(silent=false) {
     const k = document.getElementById('api-key-gemini').value;
     const sel = document.getElementById('model-select');
-    if(!k) return;
+    if(!k) {
+        if(!silent) alert("Gemini APIキーが設定されていません。");
+        return;
+    }
     try {
         const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${k}`);
+        
+        // HTTPステータスコードのチェック
+        if(!r.ok) {
+            const errorData = await r.json().catch(() => ({}));
+            const errorMsg = errorData.error?.message || `HTTP ${r.status}: ${r.statusText}`;
+            throw new Error(errorMsg);
+        }
+        
         const d=await r.json();
+        
+        // エラーレスポンスのチェック
+        if(d.error) {
+            throw new Error(d.error.message || 'Unknown error');
+        }
+        
+        // modelsプロパティの存在確認
+        if(!d.models || !Array.isArray(d.models)) {
+            throw new Error('APIレスポンスにmodelsプロパティがありません。APIキーが正しいか確認してください。');
+        }
+        
         sel.innerHTML='';
-        d.models.filter(m=>m.supportedGenerationMethods?.includes("generateContent")&&(m.name.includes("flash")||m.name.includes("pro"))).forEach(m=>{
-            const o=document.createElement('option'); o.value=m.name.replace('models/',''); o.text=m.displayName; sel.appendChild(o);
+        const filteredModels = d.models.filter(m=>
+            m.supportedGenerationMethods?.includes("generateContent")&&
+            (m.name.includes("flash")||m.name.includes("pro"))
+        );
+        
+        if(filteredModels.length === 0) {
+            sel.innerHTML='<option>利用可能なモデルが見つかりません</option>';
+            sel.disabled=true;
+            if(!silent) alert("利用可能なGeminiモデルが見つかりませんでした。");
+            return;
+        }
+        
+        filteredModels.forEach(m=>{
+            const o=document.createElement('option'); 
+            o.value=m.name.replace('models/',''); 
+            o.text=m.displayName || m.name; 
+            sel.appendChild(o);
         });
         sel.disabled=false;
-    } catch(e) { if(!silent) alert("Gemini モデル取得エラー: " + e.message); }
+        
+        if(!silent) {
+            console.log(`Geminiモデルを${filteredModels.length}件取得しました。`);
+        }
+    } catch(e) { 
+        console.error("Gemini モデル取得エラー:", e);
+        if(!silent) {
+            alert("Gemini モデル取得エラー: " + (e.message || e));
+        }
+        // エラー時もセレクトボックスをリセット
+        if(sel) {
+            sel.innerHTML='<option>エラー: モデルを取得できませんでした</option>';
+            sel.disabled=true;
+        }
+    }
 }
 
 async function sendToGemini(blob, mime) {
@@ -101,6 +152,13 @@ async function sendToGemini(blob, mime) {
         const jsonMatch = rawText.match(/\{[\s\S]*\}/);
         const result = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(rawText);
         
+        // API使用量を記録
+        if (typeof window.recordApiUsage === 'function') {
+            const promptTokens = Math.ceil(promptText.length / 4); // 簡易推定
+            const responseTokens = Math.ceil(rawText.length / 4); // 簡易推定
+            window.recordApiUsage('gemini', m, promptTokens, responseTokens);
+        }
+        
         checkPronunciation(result); 
     }catch(e){ 
         handleError(e); 
@@ -133,6 +191,12 @@ async function sendToOpenAI(blob, mime) {
         const transData = await transRes.json();
         if(transData.error) throw new Error(transData.error.message);
         
+        // Whisper API使用量を記録（音声ファイルから推定）
+        if (typeof window.recordApiUsage === 'function') {
+            const audioTokens = Math.ceil((blob.size / 1024 / 16) * 150); // 1秒≈150トークン
+            window.recordApiUsage('openai', 'whisper-1', audioTokens, 0);
+        }
+        
         const heardWord = transData.text.replace(/[\.\,\!\?]/g, '').trim().toLowerCase();
         
         const target = targetObj.w.toLowerCase();
@@ -164,6 +228,13 @@ async function sendToOpenAI(blob, mime) {
         });
         const chatData = await chatRes.json();
         const advice = chatData.choices[0].message.content;
+
+        // GPT-4o-mini API使用量を記録
+        if (typeof window.recordApiUsage === 'function') {
+            const promptTokens = Math.ceil(prompt.length / 4); // 簡易推定
+            const responseTokens = Math.ceil(advice.length / 4); // 簡易推定
+            window.recordApiUsage('openai', 'gpt-4o-mini', promptTokens, responseTokens);
+        }
 
         checkPronunciation({ heard: heardWord, correct: false, advice: advice });
 

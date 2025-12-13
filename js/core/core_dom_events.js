@@ -82,6 +82,21 @@ function toggleProviderSettings() {
     document.querySelectorAll('.provider-config').forEach(el => el.style.display = 'none');
     const target = document.getElementById(`config-${provider}`);
     if (target) target.style.display = 'block';
+    
+    // API使用量表示を更新
+    if (typeof window.updateUsageDisplay === 'function') {
+        window.updateUsageDisplay();
+    }
+    
+    // API使用量設定のチェックボックスを更新
+    const checkbox = document.getElementById('toggle-api-usage');
+    if (checkbox) {
+        const saved = localStorage.getItem('lr_api_usage_enabled');
+        // API使用時はデフォルトON
+        checkbox.checked = (provider === 'gemini' || provider === 'openai') 
+            ? (saved === null ? true : saved === 'true')
+            : (saved === 'true');
+    }
 }
 
 // --- 6. その他 UI操作ヘルパー ---

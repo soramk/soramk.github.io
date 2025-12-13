@@ -32,6 +32,7 @@
         // --- Feature Extensions ---
         'js/features/feature_extensions.js',           // 学習記録の自動保存とグラフ化機能
         'js/features/feature_scoring.js',              // AIによる100点満点スコアリング機能
+        'js/features/feature_api_usage.js',            // API使用量表示機能（トークン数・リクエスト数）
         'js/features/feature_overlay_playback.js',     // 「自分の声とモデル音声の重ね合わせ再生（オーバーレイ再生）」機能
         'js/features/feature_help_link.js',            // ヘルプリンクの追加
         'js/features/feature_formant_game.js',         // フォルマント（F3）の可視化ゲーム機能

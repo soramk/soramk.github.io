@@ -98,6 +98,13 @@ window.sendToGemini = async function(blob, mime) {
             const jsonMatch = rawText.match(/\{[\s\S]*\}/);
             const result = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(rawText);
             
+            // API使用量を記録
+            if (typeof window.recordApiUsage === 'function') {
+                const promptTokens = Math.ceil(promptText.length / 4); // 簡易推定
+                const responseTokens = Math.ceil(rawText.length / 4); // 簡易推定
+                window.recordApiUsage('gemini', m, promptTokens, responseTokens);
+            }
+            
             // ここでチェック関数へ渡す
             window.checkPronunciation(result); 
 
