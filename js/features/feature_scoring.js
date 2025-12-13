@@ -66,6 +66,16 @@ window.sendToGemini = async function(blob, mime) {
         generationConfig: { response_mime_type: "application/json" }
     };
 
+    // デバッグログを記録
+    if (typeof window.addApiDebugLog === 'function') {
+        window.addApiDebugLog('gemini', m, promptText, {
+            url: url,
+            mimeType: mime.split(';')[0],
+            targetWord: targetObj.w,
+            isTargetL: isL
+        });
+    }
+
     // ★リトライロジック (最大3回)
     const MAX_RETRIES = 3;
     let attempt = 0;

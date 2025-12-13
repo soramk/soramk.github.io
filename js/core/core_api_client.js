@@ -168,6 +168,16 @@ async function sendToGemini(blob, mime) {
         generationConfig: { response_mime_type: "application/json" }
     };
 
+    // デバッグログを記録
+    if (typeof window.addApiDebugLog === 'function') {
+        window.addApiDebugLog('gemini', m, promptText, {
+            url: url,
+            mimeType: mime.split(';')[0],
+            targetWord: targetObj.w,
+            isTargetL: isL
+        });
+    }
+    
     try{
         const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
         const d=await res.json(); 
@@ -202,6 +212,12 @@ async function sendToOpenAI(blob, mime) {
     if(!k) { alert("OpenAI Key missing"); return; }
     
     try {
+        // Whisper API呼び出しのデバッグログ
+        if (typeof window.addApiDebugLog === 'function') {
+            window.addApiDebugLog('openai', 'whisper-1', `音声ファイルを文字起こし\nファイルサイズ: ${(blob.size / 1024).toFixed(2)}KB\n対象単語: ${targetObj.w}`, {
+            });
+        }
+        
         const formData = new FormData();
         const file = new File([blob], "audio.webm", { type: mime });
         formData.append("file", file);
@@ -238,6 +254,15 @@ async function sendToOpenAI(blob, mime) {
         Provide a very brief 1-sentence advice in JAPANESE about how to fix the pronunciation.
         Format: Just the Japanese string.
         `;
+
+        // GPT-4o-mini API呼び出しのデバッグログ
+        if (typeof window.addApiDebugLog === 'function') {
+            window.addApiDebugLog('openai', 'gpt-4o-mini', prompt, {
+                heardWord: heardWord,
+                targetWord: targetObj.w,
+                isTargetL: isL
+            });
+        }
 
         const chatRes = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
@@ -276,6 +301,13 @@ function startWebSpeech() {
     const isL = (typeof isTargetL !== 'undefined') ? isTargetL : true;
     const current = (typeof currentPair !== 'undefined') ? currentPair : {l:{w:'test'}, r:{w:'test'}};
     const targetObj = isL ? current.l : current.r;
+
+    // Web Speech API呼び出しのデバッグログ
+    if (typeof window.addApiDebugLog === 'function') {
+        window.addApiDebugLog('web', 'Web Speech API', `ブラウザ標準の音声認識を使用\n対象単語: ${targetObj.w}\n言語: en-US`, {
+            isTargetL: isL
+        });
+    }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SpeechRecognition) { alert("Web Speech API not supported."); return; }
