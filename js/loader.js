@@ -94,31 +94,42 @@
         'https://cdn.jsdelivr.net/npm/chart.js', // CDNはそのまま
 
         // --- Feature Extensions ---
-        'js/features/feature_extensions.js',           // 学習記録の自動保存とグラフ化機能
-        'js/features/feature_scoring.js',              // AIによる100点満点スコアリング機能
-        'js/features/feature_api_usage.js',            // API使用量表示機能（トークン数・リクエスト数）
-        'js/features/feature_api_debug.js',            // APIデバッグログ表示機能（モデル名・プロンプト内容）
-        'js/features/feature_overlay_playback.js',     // 「自分の声とモデル音声の重ね合わせ再生（オーバーレイ再生）」機能
-        'js/features/feature_help_link.js',            // ヘルプリンクの追加
-        'js/features/feature_formant_game.js',         // フォルマント（F3）の可視化ゲーム機能
-        'js/features/feature_mirror_mode.js',          // Webカメラによる「リアルタイム・ミラーリング」機能
-        'js/features/feature_blitz_mode.js',           // 高速モード（Blitz Mode）ミニマル・ペア・ブリッツ（聴覚特訓）機能
-        'js/features/feature_tongue_twister.js',       // 早口言葉（Tongue Twister）チャレンジ機能
-        'js/features/feature_celebration.js',          // 高得点や連勝時に紙吹雪を舞わせる演出機能
-        'js/features/feature_rank_system.js',          // RPG風ランクシステム機能
-        'js/features/feature_katakana_hint.js',        // L/R対応カタカナ自動生成プラグイン
-        'js/features/feature_sentence_mode.js',        // センテンス（短文）シャドーイング機能
-        'js/features/feature_reaction_mascot.js',      // 反応するマスコット機能
-        'js/features/feature_pronunciation_trend.js',  // 発音トレンド分析機能
-        'js/features/feature_custom_session.js',       // カスタム練習セッション機能
-        'js/features/feature_coaching_mode.js',        // 発音コーチングモード機能
-        'js/features/feature_detailed_stats.js',       // 詳細統計ダッシュボード機能
-        'js/features/feature_review_reminder.js',      // 復習リマインダー機能
-        'js/features/feature_pronunciation_notes.js',  // 発音ノート機能
-        'js/features/feature_accent_selection.js',     // アクセント選択機能
-        'js/features/feature_rhythm_mode.js',          // リズム練習モード機能
-        'js/features/feature_time_attack.js',          // タイムアタックモード機能
-        'js/features/feature_audio_effects.js',        // 音声エフェクト機能
+        // Core Features
+        'js/features/core/feature_extensions.js',           // 学習記録の自動保存とグラフ化機能
+        'js/features/core/feature_scoring.js',              // AIによる100点満点スコアリング機能
+        'js/features/core/feature_overlay_playback.js',     // 「自分の声とモデル音声の重ね合わせ再生（オーバーレイ再生）」機能
+        'js/features/core/feature_help_link.js',            // ヘルプリンクの追加
+        
+        // Game & Challenge Features
+        'js/features/game/feature_blitz_mode.js',           // 高速モード（Blitz Mode）ミニマル・ペア・ブリッツ（聴覚特訓）機能
+        'js/features/game/feature_tongue_twister.js',       // 早口言葉（Tongue Twister）チャレンジ機能
+        'js/features/game/feature_sentence_mode.js',        // センテンス（短文）シャドーイング機能
+        'js/features/game/feature_rhythm_mode.js',          // リズム練習モード機能
+        'js/features/game/feature_time_attack.js',          // タイムアタックモード機能
+        'js/features/game/feature_formant_game.js',         // フォルマント（F3）の可視化ゲーム機能
+        
+        // Visual Features
+        'js/features/visual/feature_mirror_mode.js',        // Webカメラによる「リアルタイム・ミラーリング」機能
+        'js/features/visual/feature_celebration.js',        // 高得点や連勝時に紙吹雪を舞わせる演出機能
+        'js/features/visual/feature_reaction_mascot.js',    // 反応するマスコット機能
+        
+        // Analysis Features
+        'js/features/analysis/feature_pronunciation_trend.js',  // 発音トレンド分析機能
+        'js/features/analysis/feature_detailed_stats.js',       // 詳細統計ダッシュボード機能
+        'js/features/analysis/feature_api_usage.js',            // API使用量表示機能（トークン数・リクエスト数）
+        'js/features/analysis/feature_api_debug.js',            // APIデバッグログ表示機能（モデル名・プロンプト内容）
+        
+        // Learning Support Features
+        'js/features/learning/feature_custom_session.js',       // カスタム練習セッション機能
+        'js/features/learning/feature_coaching_mode.js',        // 発音コーチングモード機能
+        'js/features/learning/feature_review_reminder.js',      // 復習リマインダー機能
+        'js/features/learning/feature_pronunciation_notes.js',  // 発音ノート機能
+        'js/features/learning/feature_katakana_hint.js',        // L/R対応カタカナ自動生成プラグイン
+        'js/features/learning/feature_accent_selection.js',     // アクセント選択機能
+        'js/features/learning/feature_audio_effects.js',        // 音声エフェクト機能
+        
+        // UI Features
+        'js/features/ui/feature_rank_system.js',          // RPG風ランクシステム機能
 
         // --- Utilities ---
         'js/utils/util_settings_organizer.js',      // 設定画面の整理整頓機能（カテゴリ分け）
