@@ -11,9 +11,9 @@ const HTML_TEMPLATES = {
         <div class="header-bar">
             <h1 class="app-title">L/R Master</h1>
             <div class="header-tools">
-                <button class="btn-icon" onclick="toggleDarkMode()" title="ダークモード">🌙</button>
-                <button class="btn-icon" onclick="openDbManager()" title="DB編集">📝</button>
-                <button class="btn-icon" onclick="openSettings()" style="color:var(--primary);" title="設定">⚙️</button>
+                <button id="dark-mode-btn" class="btn-icon" onclick="toggleDarkMode()" title="ダークモード">🌙</button>
+                <button id="db-manager-btn" class="btn-icon" onclick="openDbManager()" title="DB編集">📝</button>
+                <button id="settings-btn" class="btn-icon" onclick="openSettings()" style="color:var(--primary);" title="設定">⚙️</button>
             </div>
         </div>
 

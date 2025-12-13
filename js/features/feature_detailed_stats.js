@@ -154,7 +154,7 @@
             : 0;
 
         let html = `
-            <h2 style="margin-top:0; color:var(--primary);">📊 詳細統計ダッシュボード</h2>
+            <h2 style="margin-top:0; color:var(--primary);">📋 詳細統計ダッシュボード</h2>
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:15px; margin:20px 0;">
                 <div style="background:rgba(59,130,246,0.1); padding:15px; border-radius:8px; text-align:center;">
                     <div style="font-size:2rem; font-weight:bold; color:var(--primary);">${hours}h ${minutes}m</div>
@@ -280,7 +280,7 @@
         };
 
         label.appendChild(checkbox);
-        label.appendChild(document.createTextNode("📊 詳細統計ダッシュボードを有効にする"));
+        label.appendChild(document.createTextNode("📋 詳細統計ダッシュボードを有効にする"));
         wrapper.appendChild(label);
 
         const desc = document.createElement('p');
@@ -306,7 +306,7 @@
         const btn = document.createElement('button');
         btn.id = 'detailed-stats-btn';
         btn.className = 'btn-icon';
-        btn.innerHTML = '📊';
+        btn.innerHTML = '📋';
         btn.title = "詳細統計";
         btn.onclick = showStatsDashboard;
         btn.style.display = isEnabled() ? 'inline-block' : 'none';

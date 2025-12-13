@@ -29,10 +29,10 @@
         'lr_pronunciation_trend_enabled': false,  // 発音トレンド分析
         'lr_custom_session_enabled': false,       // カスタム練習セッション
         'lr_coaching_mode_enabled': false,        // 発音コーチングモード
-        'lr_detailed_stats_enabled': false,       // 詳細統計ダッシュボード
-        'lr_review_reminder_enabled': false,      // 復習リマインダー
+        'lr_detailed_stats_enabled': true,        // 詳細統計ダッシュボード（デフォルトON）
+        'lr_review_reminder_enabled': true,       // 復習リマインダー（デフォルトON）
         'lr_pronunciation_notes_enabled': false,  // 発音ノート機能
-        'lr_accent_selection_enabled': false,     // アクセント選択機能
+        'lr_accent_selection_enabled': true,      // アクセント選択機能（デフォルトON）
         
         // API・デバッグ系
         'lr_api_usage_enabled': null,      // API使用量表示 (null=プロバイダーに応じて自動)
@@ -116,6 +116,7 @@
 
         // --- Utilities ---
         'js/utils/util_settings_organizer.js',      // 設定画面の整理整頓機能（カテゴリ分け）
+        'js/utils/util_header_menu.js',             // ヘッダーメニューの整理機能（その他メニュー）
         'js/utils/util_ios_mic_fix.js',             // iOS向けマイク解放パッチ
         'js/utils/util_ios_scroll_fix.js'           // iOS向けスクロール固定パッチ
     ];

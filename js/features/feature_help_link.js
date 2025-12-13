@@ -24,8 +24,8 @@
             window.location.href = 'help.html';
         };
 
-        // 設定ボタン(⚙️)などの最後に追加
-        tools.appendChild(btn);
+        // その他メニューに追加されるため、ここでは追加しない
+        // tools.appendChild(btn);
     }
 
     // 読み込み完了後に実行
