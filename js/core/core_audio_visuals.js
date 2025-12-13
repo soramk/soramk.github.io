@@ -35,23 +35,275 @@ const sfx = {
 };
 
 // --- 2. Data Definition (Visuals) ---
-const baseFace = `<path fill="none" stroke="#cbd5e1" stroke-width="2" d="M10,50 Q10,10 45,10 Q80,10 80,50 Q80,90 45,90 Q10,90 10,50" />`;
+// 詳細な顔の輪郭と口の構造を描画するベース
+const baseFace = `
+    <!-- 顔の輪郭 -->
+    <path fill="none" stroke="#cbd5e1" stroke-width="2" d="M10,50 Q10,10 45,10 Q80,10 80,50 Q80,90 45,90 Q10,90 10,50" />
+    <!-- 鼻 -->
+    <path fill="none" stroke="#cbd5e1" stroke-width="1.5" d="M45,25 Q45,35 45,40" opacity="0.5"/>
+    <!-- あごのライン -->
+    <path fill="none" stroke="#cbd5e1" stroke-width="1.5" d="M20,85 Q45,90 70,85" opacity="0.5"/>
+`;
+
+// 共通パーツ: 上あご（口蓋）
+const upperPalate = `<path d="M25,50 Q45,48 65,50" stroke="#e5e7eb" stroke-width="2" fill="none" opacity="0.6"/>`;
+// 共通パーツ: 下あご
+const lowerJaw = `<path d="M25,70 Q45,72 65,70" stroke="#e5e7eb" stroke-width="2" fill="none" opacity="0.6"/>`;
+// 共通パーツ: 上の歯
+const upperTeeth = `<rect x="32" y="50" width="26" height="6" fill="#fff" stroke="#d1d5db" stroke-width="1" rx="1"/><path d="M38,50 L38,56 M44,50 L44,56 M50,50 L50,56 M56,50 L56,56" stroke="#d1d5db" stroke-width="0.5"/>`;
+// 共通パーツ: 下の歯
+const lowerTeeth = `<rect x="32" y="64" width="26" height="6" fill="#fff" stroke="#d1d5db" stroke-width="1" rx="1"/><path d="M38,64 L38,70 M44,64 L44,70 M50,64 L50,70 M56,64 L56,70" stroke="#d1d5db" stroke-width="0.5"/>`;
+
 const visemes = {
-    bilabial: { t: "両唇音 (Bilabial)", d: "上下の唇をしっかりと閉じて、破裂させるように音を出します (p, b, m)。", p: `${baseFace}<path d="M30,60 Q45,60 60,60" stroke="#333" stroke-width="3"/><path d="M30,60 Q45,65 60,60" stroke="#333" stroke-width="1"/>` },
-    labiodental: { t: "唇歯音 (Labiodental)", d: "上の前歯で下唇を軽く噛むように触れ、隙間から息を出します (f, v)。", p: `${baseFace}<path d="M30,55 Q45,55 60,55" stroke="#fff" stroke-width="4"/><path d="M30,62 Q45,65 60,62" fill="none" stroke="#333" stroke-width="2"/>` },
-    dental: { t: "歯音 (Dental)", d: "舌先を上下の歯で軽く挟み、その隙間から息を流します (th)。", p: `${baseFace}<path d="M30,55 Q45,55 60,55" stroke="#fff" stroke-width="4"/><path d="M30,65 Q45,65 60,65" stroke="#fff" stroke-width="4"/><path d="M35,60 Q45,60 55,60" stroke="#ef4444" stroke-width="3"/>` },
-    alveolar: { t: "歯茎音 (Alveolar)", d: "舌先を上の前歯の裏（歯茎）に付け、弾くように音を出します (t, d, n)。", p: `${baseFace}<rect x="30" y="55" width="30" height="10" fill="#333"/><rect x="30" y="55" width="30" height="4" fill="#fff"/><rect x="30" y="61" width="30" height="4" fill="#fff"/>` },
-    postalveolar: { t: "後部歯茎音 (Post-Alveolar)", d: "唇を少し丸めて突き出し、舌を歯茎より少し後ろに引きます (sh, ch)。", p: `${baseFace}<circle cx="45" cy="60" r="12" fill="#333"/><rect x="35" y="58" width="20" height="4" fill="#fff"/>` },
-    velar: { t: "軟口蓋音 (Velar)", d: "舌の後ろを持ち上げて喉の奥（軟口蓋）につけ、息を止めたり流したりします (k, g)。", p: `${baseFace}<path d="M30,55 Q45,75 60,55" fill="#333"/>` },
-    l_shape: { t: "Lの発音 (L-Shape)", d: "★重要: 舌先を上の前歯の裏に強く押し付けます。舌の両側から声を出すイメージです。", p: `${baseFace}<path d="M30,55 Q45,70 60,55" fill="#333"/><path d="M40,55 Q45,50 50,55" fill="#ef4444"/>` },
-    r_shape: { t: "Rの発音 (R-Shape)", d: "★重要: 舌先をどこにも触れないように後ろへ引きます。唇を少し丸めると出しやすくなります。", p: `${baseFace}<circle cx="45" cy="60" r="10" fill="none" stroke="#333" stroke-width="2"/><path d="M40,65 Q45,55 50,65" fill="#ef4444"/>` },
-    pucker: { t: "すぼめ (Pucker)", d: "口を小さくすぼめて、前に突き出します (w)。", p: `${baseFace}<circle cx="45" cy="60" r="5" fill="#333" stroke="#333" stroke-width="2"/>` },
-    wide: { t: "大きく開く (Wide)", d: "あごを下げて、口を大きく開けます (a)。", p: `${baseFace}<path d="M25,55 Q45,85 65,55" fill="#333"/>` },
-    mid: { t: "中間の開き (Mid)", d: "口の力を抜いて、自然に少し開けた状態です (e, uh)。", p: `${baseFace}<path d="M30,58 Q45,72 60,58" fill="#333"/>` },
-    spread: { t: "横に引く (Spread)", d: "口角を左右に強く引いて、ニコッと笑うような形にします (iy)。", p: `${baseFace}<path d="M25,60 Q45,65 65,60" fill="#333"/><path d="M25,60 Q45,60 65,60" stroke="#333" stroke-width="1"/>` },
-    round: { t: "丸める (Round)", d: "口を縦長の楕円形に開けます (o)。", p: `${baseFace}<ellipse cx="45" cy="60" rx="10" ry="15" fill="#333"/>` },
-    u_shape: { t: "強く丸める (U-Shape)", d: "唇を強く丸めて、小さく突き出します (u)。", p: `${baseFace}<circle cx="45" cy="60" r="8" fill="#333"/>` },
-    silence: { t: "待機中 (Ready)", d: "上のボタンから音素を選んでください。", p: `${baseFace}<path d="M35,60 L55,60" stroke="#333" stroke-width="2"/>` }
+    bilabial: { 
+        t: "両唇音 (Bilabial)", 
+        d: "上下の唇をしっかりと閉じて、破裂させるように音を出します (p, b, m)。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            <!-- 閉じた唇（上下） -->
+            <path d="M30,58 Q45,60 60,58" stroke="#dc2626" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <path d="M30,62 Q45,60 60,62" stroke="#dc2626" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <!-- 唇のハイライト -->
+            <path d="M35,59 Q45,60 55,59" stroke="#ff6b6b" stroke-width="1.5" fill="none" opacity="0.6"/>
+        ` 
+    },
+    labiodental: { 
+        t: "唇歯音 (Labiodental)", 
+        d: "上の前歯で下唇を軽く噛むように触れ、隙間から息を出します (f, v)。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            ${upperTeeth}
+            <!-- 下唇（上の歯に触れている） -->
+            <path d="M30,62 Q45,64 60,62" stroke="#dc2626" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M32,63 Q45,65 58,63" fill="#ff6b6b" opacity="0.3"/>
+            <!-- 接触点の強調 -->
+            <circle cx="38" cy="56" r="1.5" fill="#ef4444"/>
+            <circle cx="52" cy="56" r="1.5" fill="#ef4444"/>
+        ` 
+    },
+    dental: { 
+        t: "歯音 (Dental)", 
+        d: "舌先を上下の歯で軽く挟み、その隙間から息を流します (th)。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            ${upperTeeth}
+            ${lowerTeeth}
+            <!-- 舌先が上下の歯の間に -->
+            <path d="M38,56 Q45,60 52,56" stroke="#ef4444" stroke-width="3" fill="#ff6b6b" opacity="0.6" stroke-linecap="round"/>
+            <path d="M40,58 Q45,60 50,58" fill="#ef4444" opacity="0.4"/>
+            <!-- 舌の先端 -->
+            <ellipse cx="45" cy="60" rx="6" ry="2" fill="#ef4444" opacity="0.7"/>
+        ` 
+    },
+    alveolar: { 
+        t: "歯茎音 (Alveolar)", 
+        d: "舌先を上の前歯の裏（歯茎）に付け、弾くように音を出します (t, d, n)。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            ${upperTeeth}
+            ${lowerTeeth}
+            <!-- 歯茎の位置を示すライン -->
+            <path d="M30,52 Q45,51 60,52" stroke="#fbbf24" stroke-width="2" fill="none" stroke-dasharray="2,2"/>
+            <!-- 舌先が歯茎に接触 -->
+            <path d="M38,52 Q45,55 52,52" stroke="#ef4444" stroke-width="4" fill="#ff6b6b" opacity="0.7" stroke-linecap="round"/>
+            <ellipse cx="45" cy="54" rx="7" ry="3" fill="#ef4444" opacity="0.6"/>
+            <!-- 接触点の強調 -->
+            <circle cx="45" cy="52" r="2" fill="#dc2626" opacity="0.8"/>
+        ` 
+    },
+    postalveolar: { 
+        t: "後部歯茎音 (Post-Alveolar)", 
+        d: "唇を少し丸めて突き出し、舌を歯茎より少し後ろに引きます (sh, ch)。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            ${upperTeeth}
+            ${lowerTeeth}
+            <!-- 丸めた唇 -->
+            <path d="M28,58 Q45,55 62,58" stroke="#dc2626" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+            <path d="M28,62 Q45,59 62,62" stroke="#dc2626" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+            <!-- 舌が後ろに引かれている -->
+            <path d="M35,58 Q45,62 55,58" stroke="#ef4444" stroke-width="3" fill="#ff6b6b" opacity="0.6"/>
+            <ellipse cx="45" cy="60" rx="10" ry="4" fill="#ef4444" opacity="0.5"/>
+            <!-- 舌の後ろの位置 -->
+            <path d="M40,60 Q45,65 50,60" fill="#ef4444" opacity="0.4"/>
+        ` 
+    },
+    velar: { 
+        t: "軟口蓋音 (Velar)", 
+        d: "舌の後ろを持ち上げて喉の奥（軟口蓋）につけ、息を止めたり流したりします (k, g)。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            ${upperTeeth}
+            ${lowerTeeth}
+            <!-- 軟口蓋の位置 -->
+            <path d="M20,48 Q45,45 70,48" stroke="#fbbf24" stroke-width="2" fill="none" stroke-dasharray="2,2" opacity="0.7"/>
+            <!-- 舌の後ろが持ち上がっている -->
+            <path d="M30,55 Q45,50 60,55" stroke="#ef4444" stroke-width="4" fill="#ff6b6b" opacity="0.7" stroke-linecap="round"/>
+            <path d="M32,57 Q45,52 58,57" fill="#ef4444" opacity="0.5"/>
+            <!-- 舌の後ろ部分が軟口蓋に接触 -->
+            <ellipse cx="45" cy="50" rx="12" ry="5" fill="#dc2626" opacity="0.6"/>
+            <circle cx="45" cy="50" r="3" fill="#dc2626" opacity="0.8"/>
+        ` 
+    },
+    l_shape: { 
+        t: "Lの発音 (L-Shape)", 
+        d: "★重要: 舌先を上の前歯の裏に強く押し付けます。舌の両側から声を出すイメージです。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            ${upperTeeth}
+            ${lowerTeeth}
+            <!-- 舌先が上の前歯の裏に強く接触 -->
+            <path d="M38,52 Q45,55 52,52" stroke="#ef4444" stroke-width="5" fill="#ff6b6b" opacity="0.8" stroke-linecap="round"/>
+            <!-- 舌のL字型の形状 -->
+            <path d="M40,52 L40,65 Q45,68 50,65 L50,52" fill="#ef4444" opacity="0.6" stroke="#dc2626" stroke-width="2"/>
+            <!-- 舌の両側が開いている様子 -->
+            <path d="M38,58 Q40,60 38,62" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.7"/>
+            <path d="M52,58 Q50,60 52,62" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.7"/>
+            <!-- 接触点の強調 -->
+            <circle cx="45" cy="52" r="3" fill="#dc2626" opacity="0.9"/>
+        ` 
+    },
+    r_shape: { 
+        t: "Rの発音 (R-Shape)", 
+        d: "★重要: 舌先をどこにも触れないように後ろへ引きます。唇を少し丸めると出しやすくなります。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            ${upperTeeth}
+            ${lowerTeeth}
+            <!-- 丸めた唇 -->
+            <path d="M30,58 Q45,56 60,58" stroke="#dc2626" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M30,62 Q45,60 60,62" stroke="#dc2626" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <!-- 舌が後ろに引かれ、中央が持ち上がっている -->
+            <path d="M35,60 Q45,55 55,60" stroke="#ef4444" stroke-width="4" fill="#ff6b6b" opacity="0.7"/>
+            <!-- 舌の中央部分が丸まっている -->
+            <ellipse cx="45" cy="57" rx="8" ry="5" fill="#ef4444" opacity="0.6"/>
+            <!-- 舌先が浮いている様子 -->
+            <path d="M40,62 Q45,58 50,62" fill="#ef4444" opacity="0.4"/>
+            <!-- 舌がどこにも触れていないことを示す -->
+            <circle cx="45" cy="57" r="2" fill="#22c55e" opacity="0.8"/>
+        ` 
+    },
+    pucker: { 
+        t: "すぼめ (Pucker)", 
+        d: "口を小さくすぼめて、前に突き出します (w)。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            <!-- すぼめた唇（前に突き出している） -->
+            <ellipse cx="45" cy="60" rx="6" ry="8" fill="#dc2626" opacity="0.8" stroke="#b91c1c" stroke-width="2"/>
+            <ellipse cx="45" cy="60" rx="4" ry="6" fill="#ff6b6b" opacity="0.5"/>
+            <!-- 唇のハイライト -->
+            <ellipse cx="43" cy="58" rx="2" ry="3" fill="#fff" opacity="0.4"/>
+        ` 
+    },
+    wide: { 
+        t: "大きく開く (Wide)", 
+        d: "あごを下げて、口を大きく開けます (a)。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            ${upperTeeth}
+            ${lowerTeeth}
+            <!-- 大きく開いた口 -->
+            <ellipse cx="45" cy="70" rx="18" ry="12" fill="#1f2937" opacity="0.3"/>
+            <path d="M27,65 Q45,82 63,65" stroke="#1f2937" stroke-width="2" fill="none"/>
+            <!-- 下あごが下がっている -->
+            <path d="M25,75 Q45,80 65,75" stroke="#cbd5e1" stroke-width="2" fill="none"/>
+            <!-- 舌が平らに下がっている -->
+            <path d="M30,70 Q45,75 60,70" stroke="#ef4444" stroke-width="3" fill="#ff6b6b" opacity="0.5"/>
+            <ellipse cx="45" cy="73" rx="15" ry="4" fill="#ef4444" opacity="0.4"/>
+        ` 
+    },
+    mid: { 
+        t: "中間の開き (Mid)", 
+        d: "口の力を抜いて、自然に少し開けた状態です (e, uh)。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            ${upperTeeth}
+            ${lowerTeeth}
+            <!-- 自然に開いた口 -->
+            <ellipse cx="45" cy="65" rx="12" ry="8" fill="#1f2937" opacity="0.2"/>
+            <path d="M33,62 Q45,70 57,62" stroke="#1f2937" stroke-width="1.5" fill="none"/>
+            <!-- 舌が自然な位置 -->
+            <path d="M35,65 Q45,68 55,65" stroke="#ef4444" stroke-width="2.5" fill="#ff6b6b" opacity="0.5"/>
+            <ellipse cx="45" cy="67" rx="10" ry="3" fill="#ef4444" opacity="0.3"/>
+        ` 
+    },
+    spread: { 
+        t: "横に引く (Spread)", 
+        d: "口角を左右に強く引いて、ニコッと笑うような形にします (iy)。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            ${upperTeeth}
+            ${lowerTeeth}
+            <!-- 横に引かれた口 -->
+            <path d="M25,60 Q45,62 65,60" stroke="#dc2626" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M25,62 Q45,64 65,62" stroke="#dc2626" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <!-- 口角が上がっている -->
+            <path d="M25,60 Q30,58 35,60" stroke="#ff6b6b" stroke-width="2" fill="none"/>
+            <path d="M55,60 Q60,58 65,60" stroke="#ff6b6b" stroke-width="2" fill="none"/>
+            <!-- 舌が少し上がっている -->
+            <path d="M35,62 Q45,65 55,62" stroke="#ef4444" stroke-width="2.5" fill="#ff6b6b" opacity="0.5"/>
+            <ellipse cx="45" cy="64" rx="10" ry="3" fill="#ef4444" opacity="0.4"/>
+        ` 
+    },
+    round: { 
+        t: "丸める (Round)", 
+        d: "口を縦長の楕円形に開けます (o)。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            ${upperTeeth}
+            ${lowerTeeth}
+            <!-- 縦長の楕円形の口 -->
+            <ellipse cx="45" cy="62" rx="8" ry="12" fill="#1f2937" opacity="0.3"/>
+            <ellipse cx="45" cy="62" rx="7" ry="11" stroke="#dc2626" stroke-width="2.5" fill="none"/>
+            <!-- 丸めた唇 -->
+            <path d="M37,58 Q45,55 53,58" stroke="#dc2626" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M37,66 Q45,69 53,66" stroke="#dc2626" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <!-- 舌が少し丸まっている -->
+            <ellipse cx="45" cy="64" rx="6" ry="4" fill="#ef4444" opacity="0.5"/>
+        ` 
+    },
+    u_shape: { 
+        t: "強く丸める (U-Shape)", 
+        d: "唇を強く丸めて、小さく突き出します (u)。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            <!-- 強く丸めて突き出した唇 -->
+            <circle cx="45" cy="60" r="7" fill="#dc2626" opacity="0.9" stroke="#b91c1c" stroke-width="2.5"/>
+            <circle cx="45" cy="60" r="5" fill="#ff6b6b" opacity="0.6"/>
+            <!-- 唇のハイライト -->
+            <ellipse cx="43" cy="58" rx="2" ry="3" fill="#fff" opacity="0.5"/>
+            <!-- 舌が後ろに引かれている -->
+            <path d="M38,62 Q45,58 52,62" stroke="#ef4444" stroke-width="2.5" fill="#ff6b6b" opacity="0.4"/>
+        ` 
+    },
+    silence: { 
+        t: "待機中 (Ready)", 
+        d: "上のボタンから音素を選んでください。", 
+        p: `${baseFace}
+            ${upperPalate}
+            ${lowerJaw}
+            ${upperTeeth}
+            ${lowerTeeth}
+            <!-- 閉じた口（自然な状態） -->
+            <path d="M35,60 L55,60" stroke="#dc2626" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <!-- 舌が自然な位置 -->
+            <path d="M38,62 Q45,63 52,62" stroke="#ef4444" stroke-width="2" fill="#ff6b6b" opacity="0.3"/>
+        ` 
+    }
 };
 
 // --- Visualizer State ---
