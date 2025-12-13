@@ -1,12 +1,12 @@
 /**
- * feature_overlay_playback.js (v4: 音量バランス最適化版)
- * 自分の声を「主役」にし、モデル音声を「背景」にするよう音量を調整。
+ * feature_overlay_playback.js (v5: 音量バランス調整版)
+ * 自分の声とモデル音声を同じ音量レベルで再生するよう調整。
  */
 
 (function() {
     // ★調整箇所
-    const USER_VOLUME_GAIN = 6.0; // ユーザー音声を6倍に増幅 (かなり大きく)
-    const MODEL_VOLUME = 0.2;     // モデル音声を20%に下げる (BGM程度に)
+    const USER_VOLUME_GAIN = 1.0; // ユーザー音声は元の音量（増幅なし）
+    const MODEL_VOLUME = 1.0;     // モデル音声も100%の音量（同じレベル）
 
     // 増幅器（Global汚染しないようwindowに紐付け）
     window.overlayCtx = null;
@@ -54,15 +54,17 @@
             await window.overlayCtx.resume();
         }
 
-        // --- モデル音声 (音量を小さく) ---
+        // --- モデル音声 (同じ音量レベル) ---
         window.speechSynthesis.cancel();
         const modelUtterance = new SpeechSynthesisUtterance(window.targetObj.w);
-        modelUtterance.lang = 'en-US';
+        // アクセント選択機能に対応
+        const selectedAccent = localStorage.getItem('lr_selected_accent') || 'en-US';
+        modelUtterance.lang = selectedAccent;
         modelUtterance.rate = window.speechRate || 0.8;
-        modelUtterance.volume = MODEL_VOLUME; // ★ここで下げる
+        modelUtterance.volume = MODEL_VOLUME; // ★同じ音量レベル
         window.speechSynthesis.speak(modelUtterance);
 
-        // --- ユーザー音声 (音量を大きく) ---
+        // --- ユーザー音声 (同じ音量レベル) ---
         try {
             const arrayBuffer = await window.userAudioBlob.arrayBuffer();
             const audioBuffer = await window.overlayCtx.decodeAudioData(arrayBuffer);
@@ -70,7 +72,7 @@
             source.buffer = audioBuffer;
 
             const gainNode = window.overlayCtx.createGain();
-            gainNode.gain.value = USER_VOLUME_GAIN; // ★ここで上げる
+            gainNode.gain.value = USER_VOLUME_GAIN; // ★同じ音量レベル
 
             source.connect(gainNode);
             gainNode.connect(window.overlayCtx.destination);
