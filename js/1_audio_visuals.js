@@ -86,7 +86,7 @@ function initCanvas(){
     } else if (!isRecording) {
         canvasCtx.fillStyle='#020617'; canvasCtx.fillRect(0,0,b.clientWidth,b.clientHeight); 
         canvasCtx.font = "14px sans-serif"; canvasCtx.fillStyle = "rgba(255,255,255,0.3)";
-        canvasCtx.fillText("Tap Start to Record", 20, 30);
+        canvasCtx.fillText("開始をタップして録音", 20, 30);
     }
 }
 
@@ -149,9 +149,9 @@ function updateVisExplanation() {
     
     if(el) el.innerHTML = explTexts[visMode];
     if(label) {
-        if(visMode === 'wave') label.innerText = "WAVE";
-        else if(visMode === 'spectrogram') label.innerText = "SPECTROGRAM";
-        else label.innerText = "SPECTRUM"; 
+        if(visMode === 'wave') label.innerText = "波形";
+        else if(visMode === 'spectrogram') label.innerText = "声紋";
+        else label.innerText = "スペクトル"; 
     }
 }
 
@@ -240,7 +240,7 @@ function renderStaticResult(buffer) {
         ctx.drawImage(specCanvas, 0, 0, specCanvas.width, specCanvas.height, 0, 0, w, h);
         ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(0, h*0.6); ctx.lineTo(w, h*0.6); ctx.stroke();
-        ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillText("F3 Region (Approx)", 10, h*0.6 - 5);
+        ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillText("F3領域（概算）", 10, h*0.6 - 5);
     } else if (visMode === 'frequency') {
         if(frequencySum && frequencyCount > 0) {
             const barW = (w / frequencySum.length) * 2.5; let x=0;
@@ -252,9 +252,9 @@ function renderStaticResult(buffer) {
                 x += barW + 1;
             }
             ctx.fillStyle = "rgba(255,255,255,0.8)"; 
-            ctx.fillText("Average Spectrum (Low ➜ High Freq)", 10, 20);
+            ctx.fillText("平均スペクトル（低周波 ➜ 高周波）", 10, 20);
         } else {
-            ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillText("No frequency data captured", 10, 20);
+            ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillText("周波数データが取得されていません", 10, 20);
         }
     } else {
         const data = buffer.getChannelData(0);
@@ -303,14 +303,14 @@ function updatePhonemesAndMouth(pair, isTargetL) {
     const svgEl = document.getElementById('diagram-svg');
     
     // 一旦リセット
-    if(titleEl) titleEl.innerHTML = "Ready";
-    if(descEl) descEl.innerText = "Select a phoneme above";
+    if(titleEl) titleEl.innerHTML = "準備完了";
+    if(descEl) descEl.innerText = "上の音素を選択してください";
     if(svgEl) svgEl.innerHTML = `<svg viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg">${visemes.silence.p}</svg>`;
     
     // ターゲット単語に発音データがない場合の処理
     const target = isTargetL ? pair.l : pair.r;
     if (!target.b || target.b.length === 0) {
-        if(descEl) descEl.innerText = "No animation data for this word.";
+        if(descEl) descEl.innerText = "この単語にはアニメーションデータがありません。";
     }
 }
 

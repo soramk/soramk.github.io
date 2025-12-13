@@ -35,10 +35,10 @@ function openDbManager() {
         if (typeof selectedLevel !== 'undefined') selectedLevel = null;
         
         const title = document.getElementById('current-level-title');
-        if(title) title.innerText = "Select a Level";
+        if(title) title.innerText = "レベルを選択";
         
         const container = document.getElementById('word-table-container');
-        if(container) container.innerHTML = '<p style="text-align:center; opacity:0.5; margin-top:50px;">👈 Select a level list</p>';
+        if(container) container.innerHTML = '<p style="text-align:center; opacity:0.5; margin-top:50px;">👈 左からレベルを選択</p>';
         
         const lvlActions = document.getElementById('level-actions');
         if(lvlActions) lvlActions.style.display = 'none';
@@ -108,11 +108,11 @@ function updateRecordButtonUI() {
 
     if (typeof window.isRecording !== 'undefined' && window.isRecording) {
         btn.classList.add('recording');
-        btn.innerText = "■ Stop";
+        btn.innerText = "■ 停止";
     } else {
         btn.classList.remove('recording');
         btn.classList.remove('processing');
-        btn.innerText = "🎤 Start";
+        btn.innerText = "🎤 開始";
         btn.style.display = 'block'; 
     }
 }

@@ -154,7 +154,7 @@ window.saveSettings = function() {
         fetchModels(true);
     }
     
-    alert("Settings Saved!");
+    alert("設定を保存しました！");
 };
 
 // 単語統計更新ヘルパー (DB操作に近いのでここに配置、または 2_db_manager.js でも可)

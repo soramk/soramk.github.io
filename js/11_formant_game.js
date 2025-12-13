@@ -132,7 +132,7 @@
                 ctx.fillRect(0,0, canvas.width/d, canvas.height/d);
                 ctx.fillStyle = 'rgba(255,255,255,0.3)';
                 ctx.font = '14px sans-serif';
-                ctx.fillText("Game Paused (Tap Start)", 20, 30);
+                ctx.fillText("ゲーム一時停止（開始をタップ）", 20, 30);
             }
         } else {
             if (originalRenderStaticResult) originalRenderStaticResult(buffer);

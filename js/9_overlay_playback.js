@@ -17,7 +17,7 @@
 
         const btn = document.createElement('button');
         btn.id = 'overlay-btn';
-        btn.innerText = "👥 Compare (Overlap)";
+        btn.innerText = "👥 比較（重ね合わせ）";
         btn.className = "action-btn";
         btn.style.marginTop = "10px";
         btn.style.marginLeft = "5px";
@@ -41,7 +41,7 @@
 
     async function playOverlayAudio() {
         if (!window.userAudioBlob) {
-            alert("No recording found!");
+            alert("録音が見つかりません！");
             return;
         }
         if (!window.targetObj || !window.targetObj.w) return;

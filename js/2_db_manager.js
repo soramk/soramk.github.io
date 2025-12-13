@@ -58,8 +58,8 @@ function openDbManager() {
     document.getElementById('db-manager-modal').style.display = 'flex';
     renderDbList();
     selectedLevel = null;
-    document.getElementById('current-level-title').innerText = "Select a Level";
-    document.getElementById('word-table-container').innerHTML = '<p style="text-align:center; opacity:0.5; margin-top:50px;">👈 Select a level list</p>';
+    document.getElementById('current-level-title').innerText = "レベルを選択";
+    document.getElementById('word-table-container').innerHTML = '<p style="text-align:center; opacity:0.5; margin-top:50px;">👈 左からレベルを選択</p>';
     document.getElementById('level-actions').style.display = 'none';
     document.getElementById('word-actions').style.display = 'none';
 }
@@ -98,17 +98,17 @@ function renderWordTable() {
     const database = window.db || {};
     const list = database[selectedLevel];
     
-    if (!list || list.length === 0) { container.innerHTML = '<p style="text-align:center; opacity:0.5; padding:20px;">No words yet. Add one!</p>'; return; }
+    if (!list || list.length === 0) { container.innerHTML = '<p style="text-align:center; opacity:0.5; padding:20px;">単語がまだありません。追加してください！</p>'; return; }
     let html = '<table style="width:100%; border-collapse: collapse; font-size:0.9rem;">';
-    html += '<tr style="border-bottom:2px solid rgba(128,128,128,0.2); text-align:left;"><th>L Word</th><th>R Word</th><th style="text-align:right;">Action</th></tr>';
+    html += '<tr style="border-bottom:2px solid rgba(128,128,128,0.2); text-align:left;"><th>Lの単語</th><th>Rの単語</th><th style="text-align:right;">操作</th></tr>';
     list.forEach((pair, idx) => {
         const hasPhonemes = (pair.l.b && pair.l.b.length > 0);
         html += `<tr style="border-bottom:1px solid rgba(128,128,128,0.1);">
             <td style="padding:8px;">${pair.l.w}</td>
             <td style="padding:8px;">${pair.r.w}</td>
             <td style="padding:8px; text-align:right;">
-                <span title="${hasPhonemes ? 'Animation Ready' : 'No Animation Data'}" style="cursor:help; font-size:0.8rem; margin-right:10px;">${hasPhonemes ? '✅' : '⚠️'}</span>
-                <button onclick="deletePair(${idx})" class="btn-small" style="background:var(--err);">Delete</button>
+                <span title="${hasPhonemes ? 'アニメーション準備完了' : 'アニメーションデータなし'}" style="cursor:help; font-size:0.8rem; margin-right:10px;">${hasPhonemes ? '✅' : '⚠️'}</span>
+                <button onclick="deletePair(${idx})" class="btn-small" style="background:var(--err);">削除</button>
             </td>
         </tr>`;
     });
@@ -116,15 +116,15 @@ function renderWordTable() {
 }
 
 function addNewLevel() {
-    const n = prompt("New Level Name (e.g., 'Travel'):");
+    const n = prompt("新しいレベル名を入力してください（例: 'Travel'）:");
     const database = window.db || {};
-    if (n && !database[n]) { database[n] = []; saveDb(); renderDbList(); selectLevel(n); } else if(database[n]) { alert("Level already exists!"); }
+    if (n && !database[n]) { database[n] = []; saveDb(); renderDbList(); selectLevel(n); } else if(database[n]) { alert("このレベルは既に存在します！"); }
 }
 
 function deleteLevel() {
     if (!selectedLevel) return;
     const database = window.db || {};
-    if (confirm(`Delete level "${selectedLevel}" and all its words?`)) { delete database[selectedLevel]; selectedLevel = null; saveDb(); openDbManager(); }
+    if (confirm(`レベル "${selectedLevel}" とそのすべての単語を削除しますか？`)) { delete database[selectedLevel]; selectedLevel = null; saveDb(); openDbManager(); }
 }
 
 function addWordPair() {
@@ -167,7 +167,7 @@ function addWordPair() {
 function deletePair(idx) {
     if (!selectedLevel) return;
     const database = window.db || {};
-    if (confirm("Delete this pair?")) { database[selectedLevel].splice(idx, 1); saveDb(); renderWordTable(); }
+    if (confirm("このペアを削除しますか？")) { database[selectedLevel].splice(idx, 1); saveDb(); renderWordTable(); }
 }
 
 function exportLevel() {
@@ -187,11 +187,11 @@ function importLevel(input) {
     reader.onload = function(e) {
         try {
             const json = JSON.parse(e.target.result);
-            if (!Array.isArray(json)) throw new Error("File must contain a list (array).");
+            if (!Array.isArray(json)) throw new Error("ファイルにはリスト（配列）が含まれている必要があります。");
             const database = window.db || {};
-            if(confirm("Click OK to APPEND.\nClick Cancel to REPLACE.")) { database[selectedLevel] = database[selectedLevel].concat(json); } else { database[selectedLevel] = json; }
-            saveDb(); renderWordTable(); alert("Import successful!");
-        } catch (err) { alert("Import failed: " + err.message); }
+            if(confirm("OKをクリックで追加（APPEND）\nキャンセルで置き換え（REPLACE）")) { database[selectedLevel] = database[selectedLevel].concat(json); } else { database[selectedLevel] = json; }
+            saveDb(); renderWordTable(); alert("インポート成功！");
+        } catch (err) { alert("インポート失敗: " + err.message); }
         input.value = '';
     };
     reader.readAsText(file);
@@ -200,5 +200,5 @@ function importLevel(input) {
 function saveDb() { localStorage.setItem('lr_v24_db', JSON.stringify(window.db)); }
 
 async function resetDb(){
-    if(confirm("Reset all data to defaults?")) { localStorage.removeItem('lr_v24_db'); await loadDb(); openDbManager(); }
+    if(confirm("すべてのデータをデフォルトにリセットしますか？")) { localStorage.removeItem('lr_v24_db'); await loadDb(); openDbManager(); }
 }

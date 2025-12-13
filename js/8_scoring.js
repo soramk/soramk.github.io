@@ -107,12 +107,12 @@ window.sendToGemini = async function(blob, mime) {
             // リトライ条件
             if (attempt < MAX_RETRIES && (e.message.includes('overloaded') || e.message.includes('Busy') || e.message.includes('Failed to fetch'))) {
                 const btn = document.getElementById('rec-btn');
-                if(btn) btn.innerText = `Retry (${attempt}/${MAX_RETRIES})...`;
+                if(btn) btn.innerText = `リトライ中 (${attempt}/${MAX_RETRIES})...`;
                 
                 await new Promise(resolve => setTimeout(resolve, 1500));
                 return tryFetch();
             } else {
-                handleError(new Error(`Gemini Error: ${e.message}. Please try changing the Model in settings.`));
+                handleError(new Error(`Geminiエラー: ${e.message}。設定でモデルを変更してみてください。`));
             }
         }
     };
@@ -130,7 +130,7 @@ window.startWebSpeech = function() {
     const targetObj = isL ? current.l : current.r;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if(!SpeechRecognition) { alert("Web Speech API not supported."); return; }
+    if(!SpeechRecognition) { alert("Web Speech APIがサポートされていません。"); return; }
 
     if(window.webRecognition) {
         try { window.webRecognition.abort(); } catch(e){}
@@ -144,7 +144,7 @@ window.startWebSpeech = function() {
 
     window.webRecognition.onstart = () => {
         const fb = document.getElementById('feedback-area');
-        if(fb) fb.innerText = "Listening (Browser)...";
+        if(fb) fb.innerText = "聞き取り中（ブラウザ）...";
         if(typeof sfx !== 'undefined' && sfx.start) sfx.start();
     };
 
@@ -179,7 +179,7 @@ window.startWebSpeech = function() {
         if (event.error === 'aborted' || event.error === 'not-allowed') return;
         console.error("Web Speech Error:", event.error);
         const fb = document.getElementById('feedback-area');
-        if(fb) fb.innerText = "Error: " + event.error;
+        if(fb) fb.innerText = "エラー: " + event.error;
         if (typeof stopRecordingInternal === 'function') stopRecordingInternal(); 
     };
 
@@ -219,8 +219,8 @@ window.addToHistory = function(target, heard, isOk, score) {
     if(!list) return;
     const li = document.createElement('li');
     li.className = 'history-item';
-    const scoreStr = (score !== undefined) ? ` <span style="font-size:0.8em; border:1px solid #ccc; border-radius:4px; padding:0 4px;">${score}pts</span>` : '';
-    li.innerHTML = `<span class="${isOk?'res-ok':'res-ng'}">${isOk?'OK':'NG'}</span> <span>Target: ${target} / ${heard}${scoreStr}</span>`;
+    const scoreStr = (score !== undefined) ? ` <span style="font-size:0.8em; border:1px solid #ccc; border-radius:4px; padding:0 4px;">${score}点</span>` : '';
+    li.innerHTML = `<span class="${isOk?'res-ok':'res-ng'}">${isOk?'OK':'NG'}</span> <span>目標: ${target} / 聞き取り: ${heard}${scoreStr}</span>`;
     list.prepend(li);
 };
 
@@ -261,7 +261,7 @@ window.handleResult = function(result) {
         }
 
         if(fb) {
-            fb.innerHTML = `🎉 Correct! ${scoreBadge}<br><small style="color:var(--text); opacity:0.8;">Heard: "${inp}"</small>`; 
+            fb.innerHTML = `🎉 正解！ ${scoreBadge}<br><small style="color:var(--text); opacity:0.8;">聞き取り: "${inp}"</small>`; 
             fb.className = "feedback correct";
         }
         
@@ -281,7 +281,7 @@ window.handleResult = function(result) {
             setTimeout(()=>cont.classList.remove('shake-anim'), 500);
         }
 
-        const adviceText = result.advice || "Try again!";
+        const adviceText = result.advice || "もう一度試してください！";
         if(fb) {
             fb.innerHTML = `⚠️ ${inp} ${scoreBadge}<br><small style="font-size:0.8rem; color:var(--text); font-weight:bold;">💡 ${adviceText}</small>`; 
             fb.className = "feedback incorrect";

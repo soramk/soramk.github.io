@@ -50,7 +50,7 @@
         const btn = document.getElementById('rec-btn');
         if (btn) {
             btn.classList.remove('recording', 'processing');
-            btn.innerText = "🎤 Start";
+            btn.innerText = "🎤 開始";
         }
     }
 

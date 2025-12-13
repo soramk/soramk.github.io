@@ -118,7 +118,7 @@ const AppExtension = {
         
         // Chart.jsが読み込まれているか確認
         if (typeof Chart === 'undefined') {
-            alert("Chart.js is not loaded. Please check index.html.");
+            alert("Chart.jsが読み込まれていません。index.htmlを確認してください。");
             return;
         }
 
@@ -143,12 +143,12 @@ const AppExtension = {
                 labels: labels,
                 datasets: [
                     {
-                        label: 'Correct',
+                        label: '正解',
                         data: dataCorrect,
                         backgroundColor: '#22c55e',
                     },
                     {
-                        label: 'Incorrect',
+                        label: '不正解',
                         data: dataWrong,
                         backgroundColor: '#ef4444',
                     }

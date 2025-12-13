@@ -19,7 +19,7 @@ function checkPronunciation(result) {
 function handleError(e) {
     console.error(e);
     const fb = document.getElementById('feedback-area');
-    if (fb) fb.innerText = "Error: " + (e.message || e);
+    if (fb) fb.innerText = "エラー: " + (e.message || e);
     
     // 録音UIのリセット
     if (typeof updateRecordButtonUI === 'function') {
@@ -57,7 +57,7 @@ async function fetchModels(silent=false) {
             const o=document.createElement('option'); o.value=m.name.replace('models/',''); o.text=m.displayName; sel.appendChild(o);
         });
         sel.disabled=false;
-    } catch(e) { if(!silent) alert("Gemini Model Fetch Error: " + e.message); }
+    } catch(e) { if(!silent) alert("Gemini モデル取得エラー: " + e.message); }
 }
 
 async function sendToGemini(blob, mime) {

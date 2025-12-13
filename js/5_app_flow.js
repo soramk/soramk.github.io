@@ -20,12 +20,12 @@ async function toggleRecord() {
     const kGemini = document.getElementById('api-key-gemini').value;
     const kOpenAI = document.getElementById('api-key-openai').value;
     if(currentProvider === 'gemini' && !kGemini) { 
-        alert("Gemini API Key is missing. Please check settings."); 
+        alert("Gemini APIキーが設定されていません。設定を確認してください。"); 
         openSettings(); 
         return; 
     }
     if(currentProvider === 'openai' && !kOpenAI) { 
-        alert("OpenAI API Key is missing. Please check settings."); 
+        alert("OpenAI APIキーが設定されていません。設定を確認してください。"); 
         openSettings(); 
         return; 
     }
@@ -33,7 +33,7 @@ async function toggleRecord() {
     try {
         // UI初期化
         btn.classList.add('recording');
-        btn.innerText = "Wait..."; 
+        btn.innerText = "待機中..."; 
         
         // 状態フラグを先に立てる
         isRecording = true;
@@ -47,10 +47,10 @@ async function toggleRecord() {
             currentStream = stream; // グローバル変数
         } catch(err) {
             console.warn("Mic access failed:", err);
-            alert("Mic access denied.");
+            alert("マイクへのアクセスが拒否されました。");
             isRecording = false;
             btn.classList.remove('recording');
-            btn.innerText = "🎤 Start";
+            btn.innerText = "🎤 開始";
             return;
         }
 
@@ -106,14 +106,14 @@ async function toggleRecord() {
 
         // 4. Web Speech APIの場合のみ認識エンジン開始
         if (currentProvider === 'web') {
-            btn.innerText = "■ Stop (Web)";
+            btn.innerText = "■ 停止（Web）";
             setTimeout(() => {
                 if(isRecording && typeof startWebSpeech === 'function') {
                     startWebSpeech(); 
                 }
             }, 50);
         } else {
-            btn.innerText = "■ Stop";
+            btn.innerText = "■ 停止";
         }
 
     } catch(e) {
@@ -131,7 +131,7 @@ function stopRecordingInternal() {
     if(btn) {
         btn.classList.remove('recording');
         btn.classList.add('processing');
-        btn.innerText = "Analyzing..."; 
+        btn.innerText = "分析中..."; 
     }
 
     // Web Speech停止
@@ -139,7 +139,7 @@ function stopRecordingInternal() {
         if(typeof stopWebSpeech === 'function') stopWebSpeech();
         setTimeout(() => {
             const b = document.getElementById('rec-btn');
-            if(b && (b.innerText === "Analyzing..." || b.innerText.includes("Stop"))) {
+            if(b && (b.innerText === "分析中..." || b.innerText.includes("停止"))) {
                 b.classList.remove('processing');
                 b.innerText = "🎤 Start";
             }
@@ -338,7 +338,7 @@ function handleResult(result) {
         }
 
         if(fb) {
-            fb.innerHTML = `🎉 Correct!<br><small style="color:var(--text); opacity:0.8;">Heard: "${inp}"</small>`; 
+            fb.innerHTML = `🎉 正解！<br><small style="color:var(--text); opacity:0.8;">聞き取り: "${inp}"</small>`; 
             fb.className = "feedback correct";
         }
         
@@ -358,7 +358,7 @@ function handleResult(result) {
             setTimeout(()=>cont.classList.remove('shake-anim'), 500);
         }
 
-        const adviceText = result.advice || "Try again!";
+        const adviceText = result.advice || "もう一度試してください！";
         if(fb) {
             fb.innerHTML = `⚠️ ${inp}<br><small style="font-size:0.8rem; color:var(--text); font-weight:bold;">💡 ${adviceText}</small>`; 
             fb.className = "feedback incorrect";
@@ -406,7 +406,7 @@ function checkListening(userChoseL){
     // 履歴には正解の単語を表示
     const targetText = window.targetObj.w;
     const choiceText = userChoseL ? window.currentPair.l.w : window.currentPair.r.w;
-    addToHistory(targetText, `Selected: ${choiceText}`, isCorrect);
+    addToHistory(targetText, `選択: ${choiceText}`, isCorrect);
     
     if(isCorrect){
         if(typeof sfx !== 'undefined') sfx.correct(); 
@@ -415,7 +415,7 @@ function checkListening(userChoseL){
             setTimeout(()=>cont.classList.remove('pop-anim'), 500);
         }
         if(fb) {
-            fb.innerHTML = "🎉 Correct!"; 
+            fb.innerHTML = "🎉 正解！"; 
             fb.className = "feedback correct";
         }
         if(typeof streak !== 'undefined') streak++;
@@ -438,7 +438,7 @@ function checkListening(userChoseL){
             setTimeout(()=>cont.classList.remove('shake-anim'), 500);
         }
         if(fb) {
-            fb.innerHTML = "😢 Wrong..."; 
+            fb.innerHTML = "😢 不正解..."; 
             fb.className = "feedback incorrect";
         }
         if(typeof streak !== 'undefined') streak = 0;
