@@ -141,7 +141,7 @@ function stopRecordingInternal() {
             const b = document.getElementById('rec-btn');
             if(b && (b.innerText === "分析中..." || b.innerText.includes("停止"))) {
                 b.classList.remove('processing');
-                b.innerText = "🎤 Start";
+                b.innerText = "🎤 開始";
             }
         }, 1000);
     }

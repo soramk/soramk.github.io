@@ -59,6 +59,8 @@ let specCanvas = null;
 let lastAudioBuffer = null; 
 let frequencySum = null; 
 let frequencyCount = 0;
+let animationFrameId = null; // アニメーションフレームIDを追跡（グローバルに公開）
+window.visualizerAnimationFrameId = null; // 外部からアクセス可能にする
 
 const explTexts = {
     wave: "【波形 (Wave)】<br>声の「大きさ」の時間変化です。R/Lの違いは形にはあまり出ませんが、リズムや強弱が分かります。",
@@ -117,6 +119,16 @@ function startAudioVisualization(stream) {
 }
 
 function resetVisualizerState() {
+    // アニメーションフレームを停止
+    if(animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+    if(window.visualizerAnimationFrameId !== null) {
+        cancelAnimationFrame(window.visualizerAnimationFrameId);
+        window.visualizerAnimationFrameId = null;
+    }
+    
     lastAudioBuffer = null;
     frequencyCount = 0;
     if(frequencySum) frequencySum.fill(0); 
@@ -157,8 +169,17 @@ function updateVisExplanation() {
 
 // Visualize Loop
 function visualize(){
-    if(!isRecording) return;
-    requestAnimationFrame(visualize);
+    if(!isRecording) {
+        // 録音が停止したらアニメーションフレームもキャンセル
+        if(animationFrameId !== null) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+            window.visualizerAnimationFrameId = null;
+        }
+        return;
+    }
+    animationFrameId = requestAnimationFrame(visualize);
+    window.visualizerAnimationFrameId = animationFrameId; // グローバルにも保存
     
     const ctx=canvasCtx, w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
     

@@ -1,15 +1,38 @@
 /**
- * util_ios_mic_fix.js (v7: 自動蘇生 & 完全クリーンアップ版)
+ * util_ios_mic_fix.js (v8: 完全クリーンアップ & マイクアイコン修正版)
  * iPhone (iOS) でホームに戻った際はマイク・オーディオを物理破壊し、
- * ★次回「Start」ボタンを押した瞬間に、自動でオーディオエンジンを再生成（蘇生）します。
+ * ★次回「開始」ボタンを押した瞬間に、自動でオーディオエンジンを再生成（蘇生）します。
+ * 
+ * 修正内容:
+ * - バックグラウンド移行時の完全なクリーンアップ
+ * - ビジュアライザーのアニメーションループ停止
+ * - アナライザーノードの切断
+ * - UIの完全なリセット（マイクアイコンの非表示）
  */
 
 (function() {
-    // --- 1. クリーンアップ処理 (前回と同じ) ---
+    // --- 1. 完全クリーンアップ処理 ---
     function forceStopMicrophone() {
         console.log("iOS Mic Fix: Cleaning up audio resources...");
 
-        // マイク停止
+        // 録音状態を即座にfalseに（これによりvisualize関数のループも自動停止）
+        if (typeof window.isRecording !== 'undefined') window.isRecording = false;
+
+        // アナライザーノードとオーディオソースノードの切断
+        if (window.audioSourceNode) {
+            try {
+                window.audioSourceNode.disconnect();
+            } catch(e) {}
+            window.audioSourceNode = null;
+        }
+        if (window.analyser) {
+            try {
+                window.analyser.disconnect();
+            } catch(e) {}
+            window.analyser = null;
+        }
+
+        // マイクストリーム停止
         if (window.currentStream) {
             try {
                 window.currentStream.getTracks().forEach(track => {
@@ -20,38 +43,79 @@
             window.currentStream = null;
         }
 
-        // Recorder停止
+        // MediaRecorder停止
         if (window.mediaRecorder) {
-            if (window.mediaRecorder.state !== 'inactive') {
-                try { window.mediaRecorder.stop(); } catch(e) {}
-            }
+            try {
+                if (window.mediaRecorder.state !== 'inactive') {
+                    window.mediaRecorder.stop();
+                }
+            } catch(e) {}
             window.mediaRecorder = null;
         }
 
         // Web Speech API停止
         if (window.webRecognition) {
-            try { window.webRecognition.abort(); } catch(e) {}
+            try { 
+                window.webRecognition.abort(); 
+            } catch(e) {}
             window.webRecognition = null;
         }
 
         // AudioContext破壊 (iOSのオレンジ点灯対策)
         if (window.audioCtx) {
-            try { window.audioCtx.close(); } catch(e) {}
+            try { 
+                window.audioCtx.close(); 
+            } catch(e) {}
             window.audioCtx = null;
         }
         if (window.overlayCtx) {
-            try { window.overlayCtx.close(); } catch(e) {}
+            try { 
+                window.overlayCtx.close(); 
+            } catch(e) {}
             window.overlayCtx = null;
         }
 
-        if (typeof window.isRecording !== 'undefined') window.isRecording = false;
+        // ビジュアライザーのアニメーションループを停止
+        if (window.visualizerAnimationFrameId !== null) {
+            try {
+                cancelAnimationFrame(window.visualizerAnimationFrameId);
+            } catch(e) {}
+            window.visualizerAnimationFrameId = null;
+        }
 
-        // UIリセット
+        // ビジュアライザーの状態リセット
+        if (typeof resetVisualizerState === 'function') {
+            resetVisualizerState();
+        }
+
+        // UIの完全なリセット
         const btn = document.getElementById('rec-btn');
         if (btn) {
             btn.classList.remove('recording', 'processing');
             btn.innerText = "🎤 開始";
+            btn.style.display = 'block';
         }
+
+        // フィードバックエリアのリセット
+        const feedback = document.getElementById('feedback-area');
+        if (feedback) {
+            feedback.className = 'feedback';
+            feedback.innerText = '準備完了';
+        }
+
+        // マイクレベル表示のリセット
+        const micDebug = document.getElementById('mic-debug');
+        if (micDebug) {
+            micDebug.innerText = 'マイク準備完了';
+        }
+
+        // 再生ボタンの非表示
+        const replayBtn = document.getElementById('replay-user-btn');
+        if (replayBtn) {
+            replayBtn.style.display = 'none';
+        }
+
+        console.log("iOS Mic Fix: Cleanup completed.");
     }
 
     // --- 2. ★追加: オーディオエンジンの自動蘇生 (Resurrector) ---
@@ -82,13 +146,25 @@
         setTimeout(attachAudioResurrector, 1000);
     });
 
-    // バックグラウンド移行検知
+    // バックグラウンド移行検知（複数のイベントで確実に検知）
     window.addEventListener('pagehide', forceStopMicrophone);
     window.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') {
             forceStopMicrophone();
         }
     });
+    window.addEventListener('blur', () => {
+        // ウィンドウがフォーカスを失ったとき（別タブや別アプリに切り替え）
+        if (window.isRecording) {
+            forceStopMicrophone();
+        }
+    });
     window.addEventListener('freeze', forceStopMicrophone);
+    
+    // iOS Safari特有のイベント
+    document.addEventListener('pause', forceStopMicrophone, false);
+    
+    // ページがアンロードされる前にもクリーンアップ
+    window.addEventListener('beforeunload', forceStopMicrophone);
 
 })();
