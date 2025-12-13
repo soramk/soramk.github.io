@@ -148,20 +148,10 @@ async function sendToGemini(blob, mime) {
     
     const url=`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${k}`;
     
-    const promptText = `
-    Input: Audio of a user trying to pronounce the English word "${targetObj.w}".
-    Task:
-    1. Identify the heard word.
-    2. Compare it with the target "${targetObj.w}" and the distractor "${(isL?current.r:current.l).w}".
-    3. If incorrect, provide a 1-sentence advice IN JAPANESE (日本語) about tongue position or lips.
-    
-    Output Format (JSON Only):
-    {
-      "heard": "english_word_heard",
-      "correct": true/false,
-      "advice": "日本語のアドバイス文字列"
-    }
-    `;
+    // プロンプトを最適化（品質を保ちつつ短縮）
+    const promptText = `Audio: user pronouncing "${targetObj.w}". 
+Task: 1) Identify heard word. 2) Compare with target "${targetObj.w}" and distractor "${(isL?current.r:current.l).w}". 3) If incorrect, provide 1-sentence JAPANESE advice about tongue/lip position.
+Output JSON: {"heard":"word","correct":true/false,"advice":"日本語アドバイス"}`;
 
     const p={
         contents:[{parts:[{text:promptText},{inline_data:{mime_type:mime.split(';')[0],data:b64}}]}],
@@ -246,14 +236,8 @@ async function sendToOpenAI(blob, mime) {
             return;
         }
 
-        const prompt = `
-        User said: "${heardWord}"
-        Target was: "${targetObj.w}"
-        Distractor was: "${(isL?current.r:current.l).w}"
-        The user pronunciation seems incorrect.
-        Provide a very brief 1-sentence advice in JAPANESE about how to fix the pronunciation.
-        Format: Just the Japanese string.
-        `;
+        // プロンプトを最適化（品質を保ちつつ短縮）
+        const prompt = `User said: "${heardWord}". Target: "${targetObj.w}", Distractor: "${(isL?current.r:current.l).w}". Pronunciation incorrect. Provide brief 1-sentence JAPANESE advice about how to fix (tongue/lip position).`;
 
         // GPT-4o-mini API呼び出しのデバッグログ
         if (typeof window.addApiDebugLog === 'function') {

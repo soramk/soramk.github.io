@@ -76,7 +76,8 @@
                     'setting-reminder-wrapper',        // 復習リマインダー
                     'setting-notes-wrapper',           // 発音ノート機能
                     'setting-accent-wrapper',          // アクセント選択機能
-                    'setting-audio-effects-wrapper'    // 音声エフェクト機能
+                    'setting-audio-effects-wrapper',   // 音声エフェクト機能
+                    'setting-audio-optimization-wrapper' // 音声最適化機能
                 ]
             },
             'api': {

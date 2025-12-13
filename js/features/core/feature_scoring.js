@@ -44,22 +44,10 @@ window.sendToGemini = async function(blob, mime) {
     
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${k}`;
     
-    // プロンプト：JSON形式を厳格に指定
-    const promptText = `
-    Input: Audio of a user trying to pronounce the English word "${targetObj.w}".
-    Task:
-    1. Identify the heard word.
-    2. Rate the pronunciation on a scale of 0 to 100.
-    3. If score is under 100, provide specific advice in JAPANESE.
-    
-    Output Format (JSON Only):
-    {
-      "heard": "word",
-      "correct": true/false,
-      "score": 85, 
-      "advice": "Japanese advice"
-    }
-    `;
+    // プロンプト：最適化版（品質を保ちつつ短縮）
+    const promptText = `Audio: user pronouncing "${targetObj.w}".
+Task: 1) Identify heard word. 2) Rate pronunciation 0-100. 3) If score<100, provide specific JAPANESE advice about tongue/lip position.
+Output JSON: {"heard":"word","correct":true/false,"score":85,"advice":"日本語アドバイス"}`;
 
     const payload = {
         contents:[{parts:[{text:promptText},{inline_data:{mime_type:mime.split(';')[0],data:b64}}]}],

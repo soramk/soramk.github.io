@@ -134,6 +134,7 @@
         // --- Utilities ---
         'js/utils/util_settings_organizer.js',      // 設定画面の整理整頓機能（カテゴリ分け）
         'js/utils/util_header_menu.js',             // ヘッダーメニューの整理機能（その他メニュー）
+        'js/utils/util_audio_optimizer.js',         // 音声最適化機能（無音削除、圧縮）
         'js/utils/util_ios_mic_fix.js',             // iOS向けマイク解放パッチ
         'js/utils/util_ios_scroll_fix.js'           // iOS向けスクロール固定パッチ
     ];

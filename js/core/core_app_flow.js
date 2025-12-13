@@ -84,12 +84,21 @@ async function toggleRecord() {
             startAudioVisualization(stream);
         }
         
-        // 3. MediaRecorder開始
+        // 3. MediaRecorder開始（最適化：低ビットレートで録音）
         let mime='audio/webm'; 
-        if(MediaRecorder.isTypeSupported('audio/mp4')) mime='audio/mp4';
-        else if(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mime='audio/webm;codecs=opus';
+        if(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            mime='audio/webm;codecs=opus';
+        } else if(MediaRecorder.isTypeSupported('audio/mp4')) {
+            mime='audio/mp4';
+        }
+        
+        // 録音オプション（ビットレートを下げてファイルサイズを削減）
+        const recorderOptions = { mimeType: mime };
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            recorderOptions.audioBitsPerSecond = 16000; // 低ビットレート（デフォルトは128000）
+        }
 
-        mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+        mediaRecorder = new MediaRecorder(stream, recorderOptions);
         audioChunks = [];
         
         mediaRecorder.ondataavailable = e => {
@@ -104,7 +113,13 @@ async function toggleRecord() {
                 currentStream = null;
             }
             
-            const blob = new Blob(audioChunks, { type: mime }); 
+            let blob = new Blob(audioChunks, { type: mime }); 
+            
+            // 音声最適化が有効な場合は最適化を適用
+            if (typeof window.optimizeAudioBlob === 'function') {
+                blob = await window.optimizeAudioBlob(blob);
+            }
+            
             userAudioBlob = blob;
             
             const replayBtn = document.getElementById('replay-user-btn');
