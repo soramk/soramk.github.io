@@ -343,7 +343,8 @@
 
         let model = '';
         if (provider === 'gemini') {
-            model = document.getElementById('model-select')?.value || 'gemini-1.5-flash';
+            const elModel = document.getElementById('model-select');
+            model = elModel ? (elModel.value || localStorage.getItem('gemini_model') || 'gemini-1.5-flash') : 'gemini-1.5-flash';
         } else if (provider === 'openai') {
             // OpenAIは2つのAPIを使うので、両方を考慮
             // 使用量は個別に記録されるが、表示は統合

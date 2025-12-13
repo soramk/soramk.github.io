@@ -45,13 +45,19 @@ async function sendToAI(audioBlob) {
 
 // --- 1. Gemini Implementation ---
 
-async function fetchModels(silent=false) {
+async function fetchModels(silent=false, savedModel=null) {
     const k = document.getElementById('api-key-gemini').value;
     const sel = document.getElementById('model-select');
     if(!k) {
         if(!silent) alert("Gemini APIキーが設定されていません。");
         return;
     }
+    
+    // 保存されたモデル選択を取得（引数がない場合はlocalStorageから）
+    if(!savedModel) {
+        savedModel = localStorage.getItem('gemini_model');
+    }
+    
     try {
         const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${k}`);
         
@@ -95,8 +101,26 @@ async function fetchModels(silent=false) {
         });
         sel.disabled=false;
         
+        // 保存されたモデル選択を復元（存在する場合）
+        if(savedModel && Array.from(sel.options).some(opt => opt.value === savedModel)) {
+            sel.value = savedModel;
+            // 復元したモデルを再度保存（確実に保存されるように）
+            localStorage.setItem('gemini_model', savedModel);
+        } else if(savedModel) {
+            // 保存されたモデルがリストにない場合、デフォルト値を設定
+            console.log(`保存されたモデル "${savedModel}" が見つかりませんでした。デフォルト値を設定します。`);
+            if(sel.options.length > 0) {
+                sel.value = sel.options[0].value;
+                localStorage.setItem('gemini_model', sel.value);
+            }
+        } else if(sel.options.length > 0) {
+            // 保存されたモデルがない場合、デフォルト値を設定
+            sel.value = sel.options[0].value;
+            localStorage.setItem('gemini_model', sel.value);
+        }
+        
         if(!silent) {
-            console.log(`Geminiモデルを${filteredModels.length}件取得しました。`);
+            console.log(`Geminiモデルを${filteredModels.length}件取得しました。選択モデル: ${sel.value}`);
         }
     } catch(e) { 
         console.error("Gemini モデル取得エラー:", e);
@@ -117,7 +141,8 @@ async function sendToGemini(blob, mime) {
     const targetObj = isL ? current.l : current.r;
 
     const k=document.getElementById('api-key-gemini').value;
-    const m=document.getElementById('model-select').value || 'gemini-1.5-flash';
+    const elModel = document.getElementById('model-select');
+    const m = elModel ? (elModel.value || localStorage.getItem('gemini_model') || 'gemini-1.5-flash') : 'gemini-1.5-flash';
     
     const b64=await new Promise(r=>{const fr=new FileReader(); fr.onloadend=()=>r(fr.result.split(',')[1]); fr.readAsDataURL(blob);});
     

@@ -36,7 +36,8 @@ window.sendToGemini = async function(blob, mime) {
     const targetObj = isL ? current.l : current.r;
 
     const k = document.getElementById('api-key-gemini').value;
-    const m = document.getElementById('model-select').value || 'gemini-1.5-flash';
+    const elModel = document.getElementById('model-select');
+    const m = elModel ? (elModel.value || localStorage.getItem('gemini_model') || 'gemini-1.5-flash') : 'gemini-1.5-flash';
     
     // Base64変換
     const b64 = await new Promise(r=>{const fr=new FileReader(); fr.onloadend=()=>r(fr.result.split(',')[1]); fr.readAsDataURL(blob);});

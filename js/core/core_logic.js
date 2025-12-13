@@ -101,12 +101,14 @@ function loadSavedSettings() {
     const kGemini = localStorage.getItem('gemini_key');
     const kOpenAI = localStorage.getItem('openai_key');
     const rate = localStorage.getItem('lr_rate');
+    const savedModel = localStorage.getItem('gemini_model'); // 保存されたモデル選択
 
     const elKeyG = document.getElementById('api-key-gemini');
     const elKeyO = document.getElementById('api-key-openai');
     const elProv = document.getElementById('ai-provider');
     const elRate = document.getElementById('speech-rate');
     const elRateVal = document.getElementById('rate-val');
+    const elModel = document.getElementById('model-select');
     
     if(elKeyG) elKeyG.value = kGemini || '';
     if(elKeyO) elKeyO.value = kOpenAI || '';
@@ -124,7 +126,11 @@ function loadSavedSettings() {
     
     // Geminiモデルリスト取得 (APIキーがある場合のみ)
     if(window.currentProvider === 'gemini' && kGemini && typeof fetchModels === 'function') {
-        fetchModels(true); // silent mode
+        // 保存されたモデル選択を渡して、モデルリスト取得後に復元する
+        fetchModels(true, savedModel); // silent mode, 保存されたモデルを渡す
+    } else if(elModel && savedModel) {
+        // APIキーがない場合でも、保存されたモデルを設定（後でfetchModelsが呼ばれたときに復元される）
+        elModel.value = savedModel;
     }
 }
 
@@ -136,9 +142,15 @@ window.saveSettings = function() {
 
     const kGemini = document.getElementById('api-key-gemini').value;
     const kOpenAI = document.getElementById('api-key-openai').value;
+    const elModel = document.getElementById('model-select');
     
     if(kGemini) localStorage.setItem('gemini_key', kGemini);
     if(kOpenAI) localStorage.setItem('openai_key', kOpenAI);
+    
+    // モデル選択を保存
+    if(elModel && elModel.value) {
+        localStorage.setItem('gemini_model', elModel.value);
+    }
 
     const elRate = document.getElementById('speech-rate');
     if(elRate) {
@@ -149,9 +161,10 @@ window.saveSettings = function() {
     // 設定画面を閉じる (core_dom_events.js の関数)
     if(typeof closeSettings === 'function') closeSettings();
     
-    // Geminiモデル更新
+    // Geminiモデル更新（保存されたモデル選択を維持）
     if(window.currentProvider === 'gemini' && kGemini && typeof fetchModels === 'function') {
-        fetchModels(true);
+        const savedModel = localStorage.getItem('gemini_model');
+        fetchModels(true, savedModel);
     }
     
     alert("設定を保存しました！");
