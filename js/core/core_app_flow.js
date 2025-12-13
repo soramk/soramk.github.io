@@ -40,11 +40,36 @@ async function toggleRecord() {
         hasSpoken = false;
         silenceStart = 0;
 
+        // 0. AudioContextの状態確認と再生成（バックグラウンドから戻った場合の対策）
+        if (typeof window.ensureAudioContext === 'function') {
+            window.ensureAudioContext();
+            // ensureAudioContextがaudioCtxを更新した可能性があるので、グローバル変数を参照
+            if (window.audioCtx) {
+                audioCtx = window.audioCtx;
+            }
+        } else {
+            // フォールバック: ensureAudioContextがまだ読み込まれていない場合
+            if (!audioCtx || audioCtx.state === 'closed') {
+                try {
+                    if (audioCtx && audioCtx.state === 'closed') {
+                        audioCtx = null;
+                        window.audioCtx = null;
+                    }
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    window.audioCtx = audioCtx;
+                    console.log("App Flow: AudioContext recreated, state:", audioCtx.state);
+                } catch(e) {
+                    console.error("App Flow: Failed to create AudioContext:", e);
+                }
+            }
+        }
+
         // 1. マイクストリーム取得
         let stream = null;
         try {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             currentStream = stream; // グローバル変数
+            console.log("App Flow: Microphone stream obtained");
         } catch(err) {
             console.warn("Mic access failed:", err);
             alert("マイクへのアクセスが拒否されました。");

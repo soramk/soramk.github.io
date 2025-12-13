@@ -93,8 +93,43 @@ function initCanvas(){
 }
 
 function startAudioVisualization(stream) {
-    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if(audioCtx.state === 'suspended') audioCtx.resume();
+    // AudioContextの状態確認と再生成（バックグラウンドから戻った場合の対策）
+    if (typeof window.ensureAudioContext === 'function') {
+        window.ensureAudioContext();
+        // ensureAudioContextがaudioCtxを更新した可能性があるので、グローバル変数を参照
+        if (window.audioCtx) {
+            audioCtx = window.audioCtx;
+        }
+    } else {
+        // フォールバック: ensureAudioContextがまだ読み込まれていない場合
+        if(!audioCtx || audioCtx.state === 'closed') {
+            try {
+                if (audioCtx && audioCtx.state === 'closed') {
+                    audioCtx = null;
+                    window.audioCtx = null;
+                }
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                window.audioCtx = audioCtx; // グローバルにも保存
+                console.log("AudioVisualization: AudioContext created, state:", audioCtx.state);
+            } catch(e) {
+                console.error("AudioVisualization: Failed to create AudioContext:", e);
+                return;
+            }
+        }
+        if(audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().then(() => {
+                console.log("AudioVisualization: AudioContext resumed");
+            }).catch(e => {
+                console.error("AudioVisualization: Failed to resume AudioContext:", e);
+            });
+        }
+    }
+    
+    // audioCtxがまだ存在しない場合はエラー
+    if (!audioCtx) {
+        console.error("AudioVisualization: AudioContext is not available");
+        return;
+    }
     
     if(analyser) analyser.disconnect();
     analyser = audioCtx.createAnalyser();
@@ -115,6 +150,11 @@ function startAudioVisualization(stream) {
     
     resetVisualizerState();
     initCanvas();
+    
+    // アニメーションフレームIDをリセット
+    animationFrameId = null;
+    window.visualizerAnimationFrameId = null;
+    
     visualize(); 
 }
 

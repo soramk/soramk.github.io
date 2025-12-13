@@ -119,21 +119,43 @@
     }
 
     // --- 2. ★追加: オーディオエンジンの自動蘇生 (Resurrector) ---
+    // グローバルに公開して、他のファイルからも呼び出せるようにする
+    window.ensureAudioContext = function() {
+        // AudioContextが存在しない、またはclosed状態の場合は再生成
+        if (!window.audioCtx || window.audioCtx.state === 'closed') {
+            console.log("iOS Mic Fix: Resurrecting AudioContext...");
+            try {
+                if (window.audioCtx && window.audioCtx.state === 'closed') {
+                    window.audioCtx = null;
+                }
+                window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                window.audioCtx = new window.AudioContext();
+                console.log("iOS Mic Fix: AudioContext created, state:", window.audioCtx.state);
+            } catch(e) {
+                console.error("iOS Mic Fix: Failed to create AudioContext:", e);
+            }
+        } else if (window.audioCtx.state === 'suspended') {
+            // suspended状態の場合はresumeを試みる
+            window.audioCtx.resume().then(() => {
+                console.log("iOS Mic Fix: AudioContext resumed");
+            }).catch(e => {
+                console.error("iOS Mic Fix: Failed to resume AudioContext:", e);
+            });
+        }
+    };
+
     function attachAudioResurrector() {
         const btn = document.getElementById('rec-btn');
         if (!btn) return;
 
         // 既存のクリックイベントよりも「前」に実行したいので、
-        // addEventListenerの capture オプション(true) を使うか、
-        // あるいは単純にクリック時にチェックする
+        // addEventListenerの capture オプション(true) を使う
         
         // ここでは「クリックされた瞬間」に audioCtx が死んでいたら生き返らせる
         btn.addEventListener('click', () => {
-            // 録音開始しようとしているのに audioCtx がない場合
-            if (!window.isRecording && !window.audioCtx) {
-                console.log("iOS Mic Fix: Resurrecting AudioContext...");
-                window.AudioContext = window.AudioContext || window.webkitAudioContext;
-                window.audioCtx = new window.AudioContext();
+            // 録音開始しようとしている場合
+            if (!window.isRecording) {
+                window.ensureAudioContext();
             }
         }, true); // true = capture phase (他の処理より先に実行)
     }
