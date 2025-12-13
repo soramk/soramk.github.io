@@ -53,7 +53,9 @@
                 items: [
                     'setting-blitz-wrapper',       // Blitzモード
                     'setting-sentence-wrapper',    // センテンスモード
-                    'setting-twister-wrapper'      // 早口言葉
+                    'setting-twister-wrapper',     // 早口言葉
+                    'setting-rhythm-wrapper',      // リズム練習モード
+                    'setting-time-attack-wrapper'  // タイムアタックモード
                 ]
             },
             'ui': {
@@ -73,7 +75,8 @@
                     'setting-detailed-stats-wrapper',  // 詳細統計ダッシュボード
                     'setting-reminder-wrapper',        // 復習リマインダー
                     'setting-notes-wrapper',           // 発音ノート機能
-                    'setting-accent-wrapper'           // アクセント選択機能
+                    'setting-accent-wrapper',          // アクセント選択機能
+                    'setting-audio-effects-wrapper'    // 音声エフェクト機能
                 ]
             },
             'api': {

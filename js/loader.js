@@ -33,6 +33,9 @@
         'lr_review_reminder_enabled': true,       // 復習リマインダー（デフォルトON）
         'lr_pronunciation_notes_enabled': true,   // 発音ノート機能（デフォルトON）
         'lr_accent_selection_enabled': true,      // アクセント選択機能（デフォルトON）
+        'lr_rhythm_mode_enabled': false,          // リズム練習モード
+        'lr_time_attack_enabled': false,          // タイムアタックモード
+        'lr_audio_effects_enabled': false,        // 音声エフェクト機能
         
         // API・デバッグ系
         'lr_api_usage_enabled': null,      // API使用量表示 (null=プロバイダーに応じて自動)
@@ -113,6 +116,9 @@
         'js/features/feature_review_reminder.js',      // 復習リマインダー機能
         'js/features/feature_pronunciation_notes.js',  // 発音ノート機能
         'js/features/feature_accent_selection.js',     // アクセント選択機能
+        'js/features/feature_rhythm_mode.js',          // リズム練習モード機能
+        'js/features/feature_time_attack.js',          // タイムアタックモード機能
+        'js/features/feature_audio_effects.js',        // 音声エフェクト機能
 
         // --- Utilities ---
         'js/utils/util_settings_organizer.js',      // 設定画面の整理整頓機能（カテゴリ分け）
