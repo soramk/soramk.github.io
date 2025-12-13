@@ -110,8 +110,8 @@
             const mirrorContainer = document.createElement('div');
             mirrorContainer.id = 'mirror-container';
             mirrorContainer.style.display = 'none';
-            mirrorContainer.style.width = '100px';
-            mirrorContainer.style.height = '80px';
+            mirrorContainer.style.width = '120px';
+            mirrorContainer.style.height = '120px';
             mirrorContainer.style.marginLeft = '10px';
             mirrorContainer.style.borderRadius = '8px';
             mirrorContainer.style.overflow = 'hidden';
@@ -128,6 +128,8 @@
             video.style.width = '100%';
             video.style.height = '100%';
             video.style.objectFit = 'cover';
+            // 口元を中央に表示するように位置調整（上から60%の位置を中央に）
+            video.style.objectPosition = 'center 60%';
 
             mirrorContainer.appendChild(video);
             diagramBox.appendChild(mirrorContainer);
@@ -159,7 +161,16 @@
     async function toggleMirror(container, video, btn) {
         if (container.style.display === 'none') {
             try {
-                videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                // フロントカメラを使用し、口元が映りやすい解像度を指定
+                const constraints = {
+                    video: {
+                        facingMode: 'user', // フロントカメラ
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    },
+                    audio: false
+                };
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = videoStream;
                 container.style.display = 'block';
                 btn.innerText = '🪞 OFF';
